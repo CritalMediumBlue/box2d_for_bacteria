@@ -78,14 +78,14 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                                         let newPosition1 = new b2.Vec2(originalPosition.x - offset.x, originalPosition.y - offset.y);
                                         let newPosition2 = new b2.Vec2(originalPosition.x + offset.x, originalPosition.y + offset.y);
                                         let newColor1 = new b2.Color(
-                                            (body.myCustomColor.r + (Math.random() - 0.5) * 0.05) % 1,//0.01 is too small
-                                            (body.myCustomColor.g + (Math.random() - 0.5) * 0.05) % 1,//0.1 is too big
-                                            (body.myCustomColor.b + (Math.random() - 0.5) * 0.05) % 1// 0.05 is perfect
+                                            (body.myCustomColor.r + Math.abs((Math.random() - 0.5) * 0.1) % 1),//0.01 is too small
+                                            (body.myCustomColor.g + Math.abs((Math.random() - 0.5) * 0.1) % 1),//0.01 is too small
+                                            (body.myCustomColor.b + Math.abs((Math.random() - 0.5) * 0.1) % 1)//0.01 is too small
                                         );
                                         let newColor2 = new b2.Color(
-                                            (body.myCustomColor.r + (Math.random() - 0.5) * 0.1) % 1,
-                                            (body.myCustomColor.g + (Math.random() - 0.5) * 0.1) % 1,
-                                            (body.myCustomColor.b + (Math.random() - 0.5) * 0.1) % 1
+                                            (body.myCustomColor.r + Math.abs((Math.random() - 0.5) * 0.1) % 1),//0.01 is too small
+                                            (body.myCustomColor.g + Math.abs((Math.random() - 0.5) * 0.1) % 1),//0.01 is too small
+                                            (body.myCustomColor.b + Math.abs((Math.random() - 0.5) * 0.1) % 1)//0.01 is too small
                                         );
                                         this.createBacteria(this.m_world, newPosition1, originalAngle, factor2, newColor1);
                                         this.createBacteria(this.m_world, newPosition2, originalAngle, factor2, newColor2);
