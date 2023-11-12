@@ -535,8 +535,8 @@ System.register(["../common/b2_settings.js", "../common/b2_math.js", "../common/
                                 else if (!b.IsAwake()) {
                                     color.SetRGB(0.6, 0.6, 0.6);
                                     this.DrawShape(f, color);
-                                } else if (b.myCustomColor) {
-                                    color.SetRGB(0.6, 0.6, 0.6);
+                                }
+                                else if (b.myCustomColor){
                                     this.DrawShape(f, b.myCustomColor);
                                 }
                                 else {
