@@ -137,6 +137,7 @@ export declare class b2Body {
     IsSleepingAllowed(): boolean;
     SetAwake(flag: boolean): void;
     IsAwake(): boolean;
+    myCustomColor(): b2Color;
     SetEnabled(flag: boolean): void;
     IsEnabled(): boolean;
     SetFixedRotation(flag: boolean): void;
