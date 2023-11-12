@@ -34,7 +34,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CritalMediumBlue/box2d_for_bacteria.git"
+    "url": "git+https://github.com/flyover/box2d.ts.git"
   },
   "author": "Isaac Burns <isaacburns@gmail.com>",
   "license": "Zlib",
