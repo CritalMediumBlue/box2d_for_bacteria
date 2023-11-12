@@ -125,7 +125,7 @@ System.register(["@box2d", "./draw.js", "./fullscreen_ui.js", "./particle_parame
                     // #if B2_ENABLE_PARTICLE
                     const particleSystemDef = new b2.ParticleSystemDef();
                     // #endif
-                    const gravity = new b2.Vec2(0, -10);
+                    const gravity = new b2.Vec2(0, 0);
                     this.m_world = new b2.World(gravity);
                     // #if B2_ENABLE_PARTICLE
                     this.m_particleSystem = this.m_world.CreateParticleSystem(particleSystemDef);
@@ -440,7 +440,7 @@ System.register(["@box2d", "./draw.js", "./fullscreen_ui.js", "./particle_parame
                     }
                     // #endif
                     if (this.m_bombSpawning) {
-                        const c = new b2.Color(0, 0, 1);
+                        const c = new b2.Color(0, 0, 1); 
                         draw_js_1.g_debugDraw.DrawPoint(this.m_bombSpawnPoint, 4, c);
                         c.SetRGB(0.8, 0.8, 0.8);
                         draw_js_1.g_debugDraw.DrawSegment(this.m_mouseWorld, this.m_bombSpawnPoint, c);

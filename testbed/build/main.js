@@ -233,7 +233,7 @@ System.register(["@box2d", "./settings.js", "./test.js", "./draw.js", "./tests/a
                     debug_div.style.font = "10pt Courier New";
                     debug_div.style.zIndex = "256";
                     debug_div.innerHTML = "";
-                    document.body.style.backgroundColor = "rgba(51, 51, 51, 1.0)";
+                    document.body.style.backgroundColor = "rgba(255, 255, 255, 0.5)";
                     const main_div = document.body.appendChild(document.createElement("div"));
                     main_div.style.position = "absolute"; // relative to document.body
                     main_div.style.left = "0px";
@@ -249,7 +249,7 @@ System.register(["@box2d", "./settings.js", "./test.js", "./draw.js", "./tests/a
                     const title_div = main_div.appendChild(document.createElement("div"));
                     title_div.style.textAlign = "center";
                     title_div.style.color = "grey";
-                    title_div.innerHTML = "Box2D Testbed version " + b2.version.toString();
+                    title_div.innerHTML = "Biofilm monolayer simulator " + b2.version.toString();
                     const view_div = main_div.appendChild(document.createElement("div"));
                     const canvas_div = this.m_canvas_div = view_div.appendChild(document.createElement("div"));
                     canvas_div.style.position = "absolute"; // relative to view_div
@@ -325,10 +325,10 @@ System.register(["@box2d", "./settings.js", "./test.js", "./draw.js", "./tests/a
                         return number_input;
                     }
                     const number_input_table = controls_div.appendChild(document.createElement("table"));
-                    connect_number_input(number_input_table, "Vel Iters", this.m_settings.m_velocityIterations, (value) => { this.m_settings.m_velocityIterations = value; }, 1, 20, 1);
-                    connect_number_input(number_input_table, "Pos Iters", this.m_settings.m_positionIterations, (value) => { this.m_settings.m_positionIterations = value; }, 1, 20, 1);
+                    connect_number_input(number_input_table, "Veloc Iters", this.m_settings.m_velocityIterations, (value) => { this.m_settings.m_velocityIterations = value; }, 1, 20, 1);
+                    connect_number_input(number_input_table, "Posit Iters", this.m_settings.m_positionIterations, (value) => { this.m_settings.m_positionIterations = value; }, 1, 20, 1);
                     // #if B2_ENABLE_PARTICLE
-                    connect_number_input(number_input_table, "Pcl Iters", this.m_settings.m_particleIterations, (value) => { this.m_settings.m_particleIterations = value; }, 1, 100, 1);
+                    connect_number_input(number_input_table, "Parti Iters", this.m_settings.m_particleIterations, (value) => { this.m_settings.m_particleIterations = value; }, 1, 100, 1);
                     // #endif
                     connect_number_input(number_input_table, "Hertz", this.m_settings.m_hertz, (value) => { this.m_settings.m_hertz = value; }, 10, 120, 1);
                     // simulation checkbox inputs
@@ -355,9 +355,9 @@ System.register(["@box2d", "./settings.js", "./test.js", "./draw.js", "./tests/a
                     const draw_fieldset = controls_div.appendChild(document.createElement("fieldset"));
                     const draw_legend = draw_fieldset.appendChild(document.createElement("legend"));
                     draw_legend.appendChild(document.createTextNode("Draw"));
-                    connect_checkbox_input(draw_fieldset, "Shapes", this.m_settings.m_drawShapes, (value) => { this.m_settings.m_drawShapes = value; });
+                    connect_checkbox_input(draw_fieldset, "Bacteria", this.m_settings.m_drawShapes, (value) => { this.m_settings.m_drawShapes = value; });
                     // #if B2_ENABLE_PARTICLE
-                    connect_checkbox_input(draw_fieldset, "Particles", this.m_settings.m_drawParticles, (value) => { this.m_settings.m_drawParticles = value; });
+                    connect_checkbox_input(draw_fieldset, "Matrix", this.m_settings.m_drawParticles, (value) => { this.m_settings.m_drawParticles = value; });
                     // #endif
                     connect_checkbox_input(draw_fieldset, "Joints", this.m_settings.m_drawJoints, (value) => { this.m_settings.m_drawJoints = value; });
                     connect_checkbox_input(draw_fieldset, "AABBs", this.m_settings.m_drawAABBs, (value) => { this.m_settings.m_drawAABBs = value; });
@@ -724,7 +724,7 @@ System.register(["@box2d", "./settings.js", "./test.js", "./draw.js", "./tests/a
                             ///ctx.rotate(-g_camera.m_roll.GetAngle());
                             ctx.translate(-draw_js_1.g_camera.m_center.x, -draw_js_1.g_camera.m_center.y);
                             if (this.m_test) {
-                                this.m_test.Step(this.m_settings);
+                                this.m_test.Step(this.m_settings); // This line steps the physics simulation forward by one time step. This likely includes updating the positions of bodies in the simulation and possibly drawing them to the canvas.
                             }
                             // #if B2_ENABLE_PARTICLE
                             // Update the state of the particle parameter.

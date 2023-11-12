@@ -521,11 +521,11 @@ System.register(["../common/b2_settings.js", "../common/b2_math.js", "../common/
                                     this.DrawShape(f, new b2_draw_js_1.b2Color(1.0, 0.0, 0.0));
                                 }
                                 else if (!b.IsEnabled()) {
-                                    color.SetRGB(0.5, 0.5, 0.3);
+                                    color.SetRGB(0.5, 0.5, 0.3);//
                                     this.DrawShape(f, color);
                                 }
                                 else if (b.GetType() === b2_body_js_1.b2BodyType.b2_staticBody) {
-                                    color.SetRGB(0.5, 0.9, 0.5);
+                                    color.SetRGB(0.5, 0.9, 0.5);// green
                                     this.DrawShape(f, color);
                                 }
                                 else if (b.GetType() === b2_body_js_1.b2BodyType.b2_kinematicBody) {
@@ -536,8 +536,11 @@ System.register(["../common/b2_settings.js", "../common/b2_math.js", "../common/
                                     color.SetRGB(0.6, 0.6, 0.6);
                                     this.DrawShape(f, color);
                                 }
+                                else if (b.myCustomColor) {
+                                    this.DrawShape(f, b.myCustomColor);
+                                }
                                 else {
-                                    color.SetRGB(0.9, 0.7, 0.7);
+                                    color.SetRGB(0.9, 0.1, 0.7);// red
                                     this.DrawShape(f, color);
                                 }
                             }

@@ -15,8 +15,8 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_testIndex = 0;
                     this.m_windowWidth = 1600;
                     this.m_windowHeight = 900;
-                    this.m_hertz = 60;
-                    this.m_velocityIterations = 8;
+                    this.m_hertz = 8;
+                    this.m_velocityIterations = 3;
                     this.m_positionIterations = 3;
                     // #if B2_ENABLE_PARTICLE
                     // Particle iterations are needed for numerical stability in particle
@@ -36,12 +36,12 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_drawFrictionImpulse = false;
                     this.m_drawCOMs = false;
                     this.m_drawControllers = true;
-                    this.m_drawStats = false;
+                    this.m_drawStats = true;
                     this.m_drawProfile = false;
                     this.m_enableWarmStarting = true;
                     this.m_enableContinuous = true;
                     this.m_enableSubStepping = false;
-                    this.m_enableSleep = true;
+                    this.m_enableSleep = false;
                     this.m_pause = false;
                     this.m_singleStep = false;
                     // #if B2_ENABLE_PARTICLE
@@ -52,8 +52,8 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_testIndex = 0;
                     this.m_windowWidth = 1600;
                     this.m_windowHeight = 900;
-                    this.m_hertz = 60;
-                    this.m_velocityIterations = 8;
+                    this.m_hertz = 8;
+                    this.m_velocityIterations = 3;
                     this.m_positionIterations = 3;
                     // #if B2_ENABLE_PARTICLE
                     // Particle iterations are needed for numerical stability in particle
@@ -75,12 +75,12 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     // #if B2_ENABLE_CONTROLLER
                     this.m_drawControllers = true;
                     // #endif
-                    this.m_drawStats = false;
+                    this.m_drawStats = true;
                     this.m_drawProfile = false;
                     this.m_enableWarmStarting = true;
                     this.m_enableContinuous = true;
                     this.m_enableSubStepping = false;
-                    this.m_enableSleep = true;
+                    this.m_enableSleep = false;
                     this.m_pause = false;
                     this.m_singleStep = false;
                     // #if B2_ENABLE_PARTICLE
