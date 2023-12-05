@@ -7,15 +7,22 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
         setters: [
             function (b2_1) {
                 b2 = b2_1;
+                
             },
             function (testbed_1) {
                 testbed = testbed_1;
             }
         ],
         execute: function () {
+            
             Pyramid = class Pyramid extends testbed.Test {
+                
                 constructor() {
+
                     super();
+                    this.m_world.SetGravity(new b2.Vec2(0, 0));
+
+
                     for (let i = 0; i < 1; ++i) {
                         this.createBacteria(this.m_world, new b2.Vec2(0.0, 0.0), 7*Math.PI/4 ,6,new b2.Color(0.5, 0.5, 0.5));
                     }
@@ -48,8 +55,20 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                     return body;
                 }
                 Step(settings) {
+                    
                     super.Step(settings);
                     if (!settings.m_pause) {
+
+                        let size = 20.0; // The size of the point
+                        let color = new b2.Color(1, 0, 0, 0.5); // The color of the point (red in this case)
+                        let separation = 30; // The separation between points
+
+                        for (let i = -25; i < 25; ++i) {
+                            for (let j = -25; j < 25; ++j) {
+                                let position = new b2.Vec2(i * separation, j * separation);
+                                testbed.g_debugDraw.DrawPoint(position, size, color);
+                            }
+                        }
                     
                         for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
                             if (body.GetType() === b2.BodyType.b2_dynamicBody) {
@@ -118,11 +137,15 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                             }
                            
                         }
+
+                  
+
                     }
                    
                 }
                 static Create() {
                     return new Pyramid();
+                    
                 }
             };
             exports_1("Pyramid", Pyramid);

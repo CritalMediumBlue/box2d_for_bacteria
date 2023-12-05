@@ -67,9 +67,9 @@ export declare class b2WorldManifold {
     Initialize(manifold: b2Manifold, xfA: b2Transform, radiusA: number, xfB: b2Transform, radiusB: number): void;
 }
 export declare enum b2PointState {
-    b2_nullState = 0,
-    b2_addState = 1,
-    b2_persistState = 2,
+    b2_nullState = 0,///< point does not exist
+    b2_addState = 1,///< point was added in the update
+    b2_persistState = 2,///< point persisted across the update
     b2_removeState = 3
 }
 export declare function b2GetPointStates(state1: b2PointState[], state2: b2PointState[], manifold1: b2Manifold, manifold2: b2Manifold): void;

@@ -125,7 +125,7 @@ System.register(["@box2d", "./draw.js", "./fullscreen_ui.js", "./particle_parame
                     // #if B2_ENABLE_PARTICLE
                     const particleSystemDef = new b2.ParticleSystemDef();
                     // #endif
-                    const gravity = new b2.Vec2(0, 0);
+                    const gravity = new b2.Vec2(0, -1);
                     this.m_world = new b2.World(gravity);
                     // #if B2_ENABLE_PARTICLE
                     this.m_particleSystem = this.m_world.CreateParticleSystem(particleSystemDef);

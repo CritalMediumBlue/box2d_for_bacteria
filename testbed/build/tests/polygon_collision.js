@@ -23,7 +23,7 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                     this.m_positionB = new b2.Vec2();
                     this.m_angleB = 0;
                     {
-                        this.m_polygonA.SetAsBox(0.2, 0.4);
+                        this.m_polygonA.SetAsBox(0.8, 0.8);
                         this.m_transformA.SetPositionAngle(new b2.Vec2(0.0, 0.0), 0.0);
                     }
                     {
@@ -76,7 +76,7 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                         testbed.g_debugDraw.DrawPolygon(v, this.m_polygonB.m_count, color);
                     }
                     for (let i = 0; i < manifold.pointCount; ++i) {
-                        testbed.g_debugDraw.DrawPoint(worldManifold.points[i], 4.0, new b2.Color(0.9, 0.3, 0.3));
+                        testbed.g_debugDraw.DrawPoint(worldManifold.points[i], 20.0, new b2.Color(0.9, 0.9, 0.3));
                     }
                     super.Step(settings);
                 }

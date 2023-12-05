@@ -71,13 +71,13 @@ export declare class b2TypedColor implements b2Color {
 }
 export declare enum b2DrawFlags {
     e_none = 0,
-    e_shapeBit = 1,
-    e_jointBit = 2,
-    e_aabbBit = 4,
-    e_pairBit = 8,
-    e_centerOfMassBit = 16,
-    e_particleBit = 32,
-    e_controllerBit = 64,
+    e_shapeBit = 1,///< draw shapes
+    e_jointBit = 2,///< draw joint connections
+    e_aabbBit = 4,///< draw axis aligned bounding boxes
+    e_pairBit = 8,///< draw broad-phase pairs
+    e_centerOfMassBit = 16,///< draw center of mass frame
+    e_particleBit = 32,///< draw particles
+    e_controllerBit = 64,/// @see b2Controller list
     e_all = 63
 }
 export declare abstract class b2Draw {

@@ -233,7 +233,7 @@ System.register(["@box2d", "./settings.js", "./test.js", "./draw.js", "./tests/a
                     debug_div.style.font = "10pt Courier New";
                     debug_div.style.zIndex = "256";
                     debug_div.innerHTML = "";
-                    document.body.style.backgroundColor = "rgba(255, 255, 255, 0.5)";
+                    document.body.style.backgroundColor = "rgba(50, 50, 50, 0.8)";
                     const main_div = document.body.appendChild(document.createElement("div"));
                     main_div.style.position = "absolute"; // relative to document.body
                     main_div.style.left = "0px";
