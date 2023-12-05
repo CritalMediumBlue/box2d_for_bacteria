@@ -59,16 +59,59 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                     super.Step(settings);
                     if (!settings.m_pause) {
 
-                        let size = 20.0; // The size of the point
-                        let color = new b2.Color(1, 0, 0, 0.5); // The color of the point (red in this case)
+
+
+
+
+                        let concentration = [];
+                        for (let i = 0; i <= 50; ++i) {
+                            concentration[i] = [];
+                            for (let j = 0; j <= 50; ++j) {
+                                concentration[i][j] = 0; // Initialize with 0 values for example
+                            }
+                        }
+
+                        let dt = 0.08; // Time step
+                        let D = 10; // Diffusion coefficient
+                        let d = 2; // Distance between points in the x direction
+
+                        // Set the boundaries to 0.5 (Dirichlet condition)
+                        for (let i = 0; i <= 50; ++i) {
+                            concentration[i][0] = 0.5;
+                            concentration[i][50] = 0.5;
+                            concentration[0][i] = 0.5;
+                            concentration[50][i] = 0.5;
+                        }
+
+                        let size = 15.0; // The size of the point
                         let separation = 10; // The separation between points
 
-                        for (let i = -25; i < 25; ++i) {
-                            for (let j = -25; j < 25; ++j) {
+                        for (let t = 0; t < 50; ++t) { // Run the simulation for 100 time steps
+                            let newConcentration = JSON.parse(JSON.stringify(concentration)); // Copy the concentration array
+
+                            for (let i = 1; i <= 49; ++i) { // Skip the first and last rows and columns
+                                for (let j = 1; j <= 49; ++j) {
+                                    newConcentration[i][j] = concentration[i][j] + dt * D * ((concentration[i+1][j] + concentration[i-1][j] + concentration[i][j+1] + concentration[i][j-1] - 4 * concentration[i][j]) / (d * d));
+                                }
+                            }
+
+                            concentration = newConcentration; // Update the concentration array
+
+                            
+                        }
+
+                        for (let i = -25; i <= 25; ++i) {
+                            for (let j = -25; j <= 25; ++j) {
+                                let color = new b2.Color(1, 0, 0, concentration[i+25][j+25]); // The color depends on the concentration
                                 let position = new b2.Vec2(i * separation, j * separation);
                                 testbed.g_debugDraw.DrawPoint(position, size, color);
                             }
                         }
+
+
+
+
+
                     
                         for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
                             if (body.GetType() === b2.BodyType.b2_dynamicBody) {
