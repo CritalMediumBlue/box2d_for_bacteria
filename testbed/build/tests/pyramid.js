@@ -61,7 +61,7 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
 
                         let size = 20.0; // The size of the point
                         let color = new b2.Color(1, 0, 0, 0.5); // The color of the point (red in this case)
-                        let separation = 30; // The separation between points
+                        let separation = 10; // The separation between points
 
                         for (let i = -25; i < 25; ++i) {
                             for (let j = -25; j < 25; ++j) {
