@@ -25,11 +25,10 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
                     super();
                     this.m_world.SetGravity(new b2.Vec2(0, 0));
-
-
                     for (let i = 0; i < 1; ++i) {
                         this.createBacteria(this.m_world, new b2.Vec2(0.0, 0.0), 7*Math.PI/4 ,6,new b2.Color(0.5, 0.5, 0.5));
                     }
+                    this.createGrid(); // Create the grid for the concentration
                 }
                 createBacteria(world, position, angle, length, myColor) {
                     const bd = new b2.BodyDef();
@@ -39,72 +38,63 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     const body = world.CreateBody(bd);
                     let a = 6*(1/4); 
                     let b = length/2; 
-
                     // Set restitution for the box
                     const boxFixtureDef = {shape: new b2.PolygonShape().SetAsBox(a, b), density: 0.001, restitution: 1, friction: 0};
                     body.CreateFixture(boxFixtureDef);
-
                     const circleShape = new b2.CircleShape(a); 
-
                     // Set restitution for the circles
                     const circleFixtureDef = {shape: circleShape, density: 0.001, restitution: 1.0, friction: 0};
                     [-b, b].forEach(dy => {
                         circleShape.m_p.Set(0, dy);
                         body.CreateFixture(circleFixtureDef);
                     });
-
                     body.growthRate = 1.001+Math.random()*0.001; 
                     body.reproductiveLength = 8*a+Math.random()*0.1;
                     body.myCustomColor = myColor;
                     return body;
                 }
+
+                createGrid() {
+                    // Initialize 2D tensors filled with zeros
+                    this.concentration = tf.zeros([51, 51]).arraySync();
+                    const kernel = tf.tensor2d([
+                        [1/16, 2/16, 1/16],
+                        [2/16, 4/16, 2/16],
+                        [1/16, 2/16, 1/16]
+                    ]);
+                    this.kernelTensor = tf.reshape(kernel, [3, 3, 1, 1]);
+                }
+
                 Step(settings) {
                     
                     super.Step(settings);
                     if (!settings.m_pause) {
-
-
-                    
                         
-                        const kernel = tf.tensor2d([
-                            [1/16, 2/16, 1/16],
-                            [2/16, 4/16, 2/16],
-                            [1/16, 2/16, 1/16]
-                          ]);
-                        let kernelTensor = tf.reshape(kernel, [3, 3, 1, 1]);
+                        tf.tidy(() => {
+                            let concentrationTensor = tf.tensor(this.concentration).reshape([1, 51, 51, 1]); // Convert the concentration to a tensor
+                            let iterations = 1; // Number of times to apply the convolution
+                            for (let i = 0; i < iterations; i++) {
+                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensor, 1, 'same');
+                            }
+                            this.concentration = concentrationTensor.arraySync()[0]; // Convert back to array after the loop
+                        });
 
 
-                        // Initialize a 2D tensor filled with zeros
-                        let concentration = tf.zeros([51, 51]);
-                        // Convert the tensor to a mutable JavaScript array
-                        concentration = concentration.arraySync();
-                        // Set the boundaries to 0.5 (Dirichlet condition)
-                        for (let i = 0; i <= 50; ++i) {
-                            concentration[i][0] = 10;
-                            concentration[i][50] = 10;
-                            concentration[0][i] = 10;
-                            concentration[50][i] = 10;
-                        }
-                        // Add two extra dimensions to the concentration array
-                        let iterations = 20; // Number of times to apply the convolution
-
-                        for (let i = 0; i < iterations; i++) {
-                        let concentrationTensor = tf.tensor(concentration).reshape([1, 51, 51, 1]);
-                        let blurred = tf.conv2d(concentrationTensor, kernelTensor, 1, 'same');
-                        let newConcentration = blurred.arraySync()[0];
-                        concentration = newConcentration; // Update the concentration array
-                        }
                         let size = 15.0; // The size of the point
                         let separation = 10; // The separation between points
            
                         for (let i = -25; i <= 25; ++i) {
                             for (let j = -25; j <= 25; ++j) {
-                                let color = new b2.Color(1, 0, 0, concentration[i+25][j+25]); // The color depends on the concentration
+                                let color = new b2.Color(1, 0, 1, this.concentration[i+25][j+25]); // The color depends on the concentration
                                 let position = new b2.Vec2(i * separation, j * separation);
                                 testbed.g_debugDraw.DrawPoint(position, size, color);
                             }
                         }
 
+                        this.concentration[25][25] = 1; // Set the concentration at the center to 100
+                        // Set the top and bottom boundaries to 0 (Dirichlet condition) 
+                        this.concentration[0].fill(0);
+                        this.concentration[50].fill(0);
 
 
                     
@@ -161,6 +151,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
                                     // Apply the air resistance force to the body
                                     body.ApplyForceToCenter(dragForce, true);
+
+                                    
 
                                 
                                     
