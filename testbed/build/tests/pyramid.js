@@ -1,19 +1,23 @@
 // MIT License
-System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
+
+System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1, context_1) {
     "use strict";
-    var b2, testbed, Pyramid, testIndex;
+    var b2, testbed, tf, Pyramid, testIndex;
     var __moduleName = context_1 && context_1.id;
     return {
         setters: [
             function (b2_1) {
                 b2 = b2_1;
-                
             },
             function (testbed_1) {
                 testbed = testbed_1;
+            },
+            function (tf_1) {
+                tf = tf_1;
             }
         ],
         execute: function () {
+            
             
             Pyramid = class Pyramid extends testbed.Test {
                 
@@ -60,8 +64,8 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                     if (!settings.m_pause) {
 
 
-
-
+                    
+                        
 
                         let concentration = [];
                         for (let i = 0; i <= 50; ++i) {
@@ -70,11 +74,6 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                                 concentration[i][j] = 0; // Initialize with 0 values for example
                             }
                         }
-
-                        let dt = 0.08; // Time step
-                        let D = 10; // Diffusion coefficient
-                        let d = 2; // Distance between points in the x direction
-
                         // Set the boundaries to 0.5 (Dirichlet condition)
                         for (let i = 0; i <= 50; ++i) {
                             concentration[i][0] = 0.5;
@@ -82,10 +81,11 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                             concentration[0][i] = 0.5;
                             concentration[50][i] = 0.5;
                         }
-
                         let size = 15.0; // The size of the point
                         let separation = 10; // The separation between points
-
+                        let dt = 0.08; // Time step
+                        let D = 10; // Diffusion coefficient
+                        let d = 2; // Distance between points in the x direction
                         for (let t = 0; t < 50; ++t) { // Run the simulation for 100 time steps
                             let newConcentration = JSON.parse(JSON.stringify(concentration)); // Copy the concentration array
 
@@ -97,7 +97,6 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
 
                             concentration = newConcentration; // Update the concentration array
 
-                            
                         }
 
                         for (let i = -25; i <= 25; ++i) {
