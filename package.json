@@ -43,6 +43,7 @@
   },
   "homepage": "https://github.com/flyover/box2d.ts#readme",
   "dependencies": {
+    "@tensorflow/tfjs-node-gpu": "^4.14.0",
     "@types/systemjs": "^6.1.0"
   },
   "devDependencies": {
