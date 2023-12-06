@@ -56,43 +56,37 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
                 createGrid() {
                     // Initialize 2D tensors filled with zeros
-                    this.concentration = tf.zeros([51, 51]).arraySync();
+                    this.concentration = tf.zeros([45, 45]).arraySync();
                     const kernel1D = tf.tensor1d([1/4, 2/4, 1/4]);
                     this.kernelTensorX = tf.reshape(kernel1D, [1, 3, 1, 1]);
                     this.kernelTensorY = tf.reshape(kernel1D, [3, 1, 1, 1]);
                 }
 
+                createCoordinates(){
+                    let p1 = new b2.Vec2(-200, 200);
+                    let p2 = new b2.Vec2(200, 200);
+                    let p3 = new b2.Vec2(200, -200);
+                    let p4 = new b2.Vec2(-200, -200);
+                    let p11 = new b2.Vec2(-220, 220);
+                    let p21 = new b2.Vec2(220, 220);
+                    let p31 = new b2.Vec2(220, -220);
+                    let p41 = new b2.Vec2(-220, -220);
+                    testbed.g_debugDraw.DrawSegment(p1, p2, new b2.Color(0, 0, 0));
+                    testbed.g_debugDraw.DrawSegment(p2, p3, new b2.Color(0, 0, 0)); 
+                    testbed.g_debugDraw.DrawSegment(p3, p4, new b2.Color(0, 0, 0));
+                    testbed.g_debugDraw.DrawSegment(p4, p1, new b2.Color(0, 0, 0)); 
+                    testbed.g_debugDraw.DrawSegment(p11, p21, new b2.Color(0, 0, 0));
+                    testbed.g_debugDraw.DrawSegment(p21, p31, new b2.Color(0, 0, 0)); 
+                    testbed.g_debugDraw.DrawSegment(p31, p41, new b2.Color(0, 0, 0));
+                    testbed.g_debugDraw.DrawSegment(p41, p11, new b2.Color(0, 0, 0));              
+                 }
+
                 Step(settings) {
                     
                     super.Step(settings);
                     if (!settings.m_pause) {
-                        
-                        tf.tidy(() => {
-                            let concentrationTensor = tf.tensor(this.concentration).reshape([1, 51, 51, 1]); // Convert the concentration to a tensor
-                            let iterations = 20; // Number of times to apply the convolution
-                            for (let i = 0; i < iterations; i++) {
-                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensorX, 1, 'same');
-                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensorY, 1, 'same');
-                            }
-                            this.concentration = concentrationTensor.arraySync()[0]; // Convert back to array after the loop
-                        });
-
-
-                        let size = 15.0; // The size of the point
-                        let separation = 10; // The separation between points
-                        if (settings.m_drawProfile) {
-                        for (let i = -25; i <= 25; ++i) {
-                            for (let j = -25; j <= 25; ++j) {
-                                let color = new b2.Color(1, 0, 1, this.concentration[i+25][j+25]); // The color depends on the concentration
-                                let position = new b2.Vec2(i * separation, j * separation);
-                                testbed.g_debugDraw.DrawPoint(position, size, color);
-                            }
-                        }
-                        }
-                        this.concentration[25][25] = 10; // Set the concentration at the center to 100
-                        // Set the top and bottom boundaries to 0 (Dirichlet condition) 
-                        this.concentration[0].fill(0);
-                        this.concentration[50].fill(0);
+    
+                
 
 
                     
@@ -114,6 +108,10 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                     const diff = new b2.Vec2(circlePositions[0].x - circlePositions[1].x, circlePositions[0].y - circlePositions[1].y);
                                     const length = diff.Length();
                                     let originalPosition = body.GetPosition();
+                                    let discretePosition = new b2.Vec2(Math.round(originalPosition.x/10), Math.round(originalPosition.y/10));
+                                    let senseConcentration = this.concentration[22+discretePosition.x][22+discretePosition.y];
+
+                                    body.myCustomColor = new b2.Color(0,senseConcentration*0.5,0);
                                     if (length >= body.reproductiveLength) {
                                         let a=6*(1/4);
                                         let originalAngle = body.GetAngle();
@@ -122,18 +120,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                         let offset = new b2.Vec2(-factor * Math.sin(originalAngle), factor * Math.cos(originalAngle));
                                         let newPosition1 = new b2.Vec2(originalPosition.x - offset.x, originalPosition.y - offset.y);
                                         let newPosition2 = new b2.Vec2(originalPosition.x + offset.x, originalPosition.y + offset.y);
-                                        let newColor1 = new b2.Color(
-                                            (body.myCustomColor.r + (Math.random() - 0.5) * 0.1) % 1,//0.01 is too small
-                                            (body.myCustomColor.g + (Math.random() - 0.5) * 0.1) % 1,//0.01 is too small
-                                            (body.myCustomColor.b + (Math.random() - 0.5) * 0.1) % 1//0.01 is too small
-                                        );
-                                        let newColor2 = new b2.Color(
-                                            (body.myCustomColor.r + (Math.random() - 0.5) * 0.1) % 1,//0.01 is too small
-                                            (body.myCustomColor.g + (Math.random() - 0.5) * 0.1) % 1,//0.01 is too small
-                                            (body.myCustomColor.b + (Math.random() - 0.5) * 0.1) % 1//0.01 is too small
-                                        );
-                                        this.createBacteria(this.m_world, newPosition1, originalAngle, factor2, newColor1);
-                                        this.createBacteria(this.m_world, newPosition2, originalAngle, factor2, newColor2);
+                                        this.createBacteria(this.m_world, newPosition1, originalAngle, factor2, body.myCustomColor);
+                                        this.createBacteria(this.m_world, newPosition2, originalAngle, factor2, body.myCustomColor);
                                         body.userData = { destroy: true };
                                     }
                                 
@@ -150,6 +138,11 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                     // Apply the air resistance force to the body
                                     body.ApplyForceToCenter(dragForce, true);
 
+                                    // get discrete position
+                                    // produce substance
+                                    //this.concentration[22+discretePosition.x][22+discretePosition.y] =+ 0;
+                                    
+                                    
                                     
 
                                 
@@ -166,7 +159,42 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                            
                         }
 
-                  
+                        for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
+                            if (body.GetType() === b2.BodyType.b2_dynamicBody) {
+
+                                let originalPosition = body.GetPosition();
+
+                                let discretePosition = new b2.Vec2(Math.round(originalPosition.x/10), Math.round(originalPosition.y/10));
+
+                                this.concentration[22+discretePosition.x][22+discretePosition.y] =+ 0.75;
+                            }
+                        }
+                       // this.concentration[35][35] = 50; // Set the concentration at the center to 1
+                        this.createCoordinates();
+
+                        
+                        tf.tidy(() => {
+                            let concentrationTensor = tf.tensor(this.concentration).reshape([1, 45, 45, 1]); // Convert the concentration to a tensor
+                            let iterations = 30; // Number of times to apply the convolution
+                            for (let i = 0; i < iterations; i++) {
+                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensorX, 1, 'same');
+                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensorY, 1, 'same');
+                            }
+                            this.concentration = concentrationTensor.arraySync()[0]; // Convert back to array after the loop
+                        });
+
+
+                        let size = 15.0; // The size of the point
+                        let separation = 10; // The separation between points
+                        if (settings.m_drawProfile) {
+                        for (let i = 0; i <= 44; ++i) {
+                            for (let j = 0; j <= 44; ++j) {
+                                let color = new b2.Color(1, 0, 1, this.concentration[i][j]); // The color depends on the concentration
+                                let position = new b2.Vec2(((i)-22) * separation, ((j)-22) * separation);
+                                testbed.g_debugDraw.DrawPoint(position, size, color);
+                            }
+                        }
+                        }
 
                     }
                    
