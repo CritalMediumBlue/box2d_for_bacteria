@@ -124,7 +124,7 @@ System.register(["@box2d"], function (exports_1, context_1) {
                         ctx.closePath();
                         ctx.strokeStyle =  color.MakeStyleString(1);
                         ctx.stroke();
-                        ctx.fillStyle =  color.MakeStyleString(0.5);
+                        ctx.fillStyle =  color.MakeStyleString(1);
                         ctx.fill();
                     }
                 }
@@ -148,7 +148,7 @@ System.register(["@box2d"], function (exports_1, context_1) {
                         ctx.lineTo((cx + axis.x * radius), (cy + axis.y * radius));
                         ctx.strokeStyle =  "black";
                         ctx.stroke();
-                        ctx.fillStyle =  color.MakeStyleString(0.5);
+                        ctx.fillStyle =  color.MakeStyleString(1);
                         ctx.fill();
                         
                     }

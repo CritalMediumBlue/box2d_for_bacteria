@@ -57,12 +57,9 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                 createGrid() {
                     // Initialize 2D tensors filled with zeros
                     this.concentration = tf.zeros([51, 51]).arraySync();
-                    const kernel = tf.tensor2d([
-                        [1/16, 2/16, 1/16],
-                        [2/16, 4/16, 2/16],
-                        [1/16, 2/16, 1/16]
-                    ]);
-                    this.kernelTensor = tf.reshape(kernel, [3, 3, 1, 1]);
+                    const kernel1D = tf.tensor1d([1/4, 2/4, 1/4]);
+                    this.kernelTensorX = tf.reshape(kernel1D, [1, 3, 1, 1]);
+                    this.kernelTensorY = tf.reshape(kernel1D, [3, 1, 1, 1]);
                 }
 
                 Step(settings) {
@@ -72,9 +69,10 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         
                         tf.tidy(() => {
                             let concentrationTensor = tf.tensor(this.concentration).reshape([1, 51, 51, 1]); // Convert the concentration to a tensor
-                            let iterations = 1; // Number of times to apply the convolution
+                            let iterations = 20; // Number of times to apply the convolution
                             for (let i = 0; i < iterations; i++) {
-                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensor, 1, 'same');
+                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensorX, 1, 'same');
+                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensorY, 1, 'same');
                             }
                             this.concentration = concentrationTensor.arraySync()[0]; // Convert back to array after the loop
                         });
@@ -82,7 +80,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
                         let size = 15.0; // The size of the point
                         let separation = 10; // The separation between points
-           
+                        if (settings.m_drawProfile) {
                         for (let i = -25; i <= 25; ++i) {
                             for (let j = -25; j <= 25; ++j) {
                                 let color = new b2.Color(1, 0, 1, this.concentration[i+25][j+25]); // The color depends on the concentration
@@ -90,8 +88,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                 testbed.g_debugDraw.DrawPoint(position, size, color);
                             }
                         }
-
-                        this.concentration[25][25] = 1; // Set the concentration at the center to 100
+                        }
+                        this.concentration[25][25] = 10; // Set the concentration at the center to 100
                         // Set the top and bottom boundaries to 0 (Dirichlet condition) 
                         this.concentration[0].fill(0);
                         this.concentration[50].fill(0);
