@@ -7,3 +7,6 @@ System.import("./build/index.js").then(function (b2) {
 System.import("./build/box2d.js").then(function (box2d) {
   console.log(box2d.b2_version);
 }).catch(console.error);
+System.import("@tensorflow/tfjs").then(function(tf) {
+  console.log(tf.version);
+}).catch(console.error);
