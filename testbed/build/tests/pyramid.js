@@ -22,15 +22,30 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
             Pyramid = class Pyramid extends testbed.Test {
                 
                 constructor() {
+                    
 
                     super();
                     this.m_world.SetGravity(new b2.Vec2(0, 0));
                     for (let i = 0; i < 1; ++i) {
-                        this.createBacteria(this.m_world, new b2.Vec2(0.0, 0.0), 7*Math.PI/4 ,6,new b2.Color(0.5, 0.5, 0.5));
+                        this.createBacteria(this.m_world, new b2.Vec2(0.0, 0.0), 7*Math.PI/4 ,6,new b2.Color(0.5, 0.5, 0.5), 196.81, 0, 1.24, "first");
                     }
                     this.createGrid(); // Create the grid for the concentration
+                    this.time_step = 0;
+                    this.stopGrowing = false;
+                    this.startGrowing = false;
                 }
-                createBacteria(world, position, angle, length, myColor) {
+
+
+                createGrid() {
+                    // Initialize 2D tensors filled with zeros
+                    this.concentration = tf.zeros([45, 45]).arraySync();
+                    const kernel1D = tf.tensor1d([1/4, 2/4, 1/4]);
+                    this.kernelTensorX = tf.reshape(kernel1D, [1, 3, 1, 1]);
+                    this.kernelTensorY = tf.reshape(kernel1D, [3, 1, 1, 1]);
+                }
+
+
+                createBacteria(world, position, angle, length, myColor, myR, myI, myL, tag) {
                     const bd = new b2.BodyDef();
                     bd.type = b2.BodyType.b2_dynamicBody;
                     bd.position.Set(position.x, position.y);
@@ -51,16 +66,16 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     body.growthRate = 1.001+Math.random()*0.001; 
                     body.reproductiveLength = 8*a+Math.random()*0.1;
                     body.myCustomColor = myColor;
+                    body.myR = myR;
+                    body.myI = myI;
+                    body.myL = myL;
+                    body.tag = tag;
+                    
+                    body.myKA = 100 + (Math.random()-0.5)*5;
+                    body.myKR = 110 + (Math.random()-0.5)*5;
                     return body;
                 }
 
-                createGrid() {
-                    // Initialize 2D tensors filled with zeros
-                    this.concentration = tf.zeros([45, 45]).arraySync();
-                    const kernel1D = tf.tensor1d([1/4, 2/4, 1/4]);
-                    this.kernelTensorX = tf.reshape(kernel1D, [1, 3, 1, 1]);
-                    this.kernelTensorY = tf.reshape(kernel1D, [3, 1, 1, 1]);
-                }
 
                 createCoordinates(){
                     let p1 = new b2.Vec2(-200, 200);
@@ -81,17 +96,107 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     testbed.g_debugDraw.DrawSegment(p41, p11, new b2.Color(0, 0, 0));              
                  }
 
+                Keyboard(key) {
+                    switch (key) {
+                        case "s":
+                            this.stopGrowing = true;
+                            break;
+                        case "i":
+                            this.startGrowing = true;
+                            break;
+                    }
+                }
+
+                KeyboardUp(key) {
+                    switch (key) {
+                        case "s":
+                            this.stopGrowing = false;
+                            break;
+                        case "i":
+                            this.startGrowing = false;
+                            break;
+                    }
+                }
+
                 Step(settings) {
-                    
                     super.Step(settings);
                     if (!settings.m_pause) {
-    
-                
-
-
-                    
+                        this.time_step += 1;
+                        let EveryNFrames = 100;
+                        if (this.time_step % EveryNFrames == 0) {
                         for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
                             if (body.GetType() === b2.BodyType.b2_dynamicBody) {
+
+                                let originalPosition = body.GetPosition();
+                                let discretePosition = new b2.Vec2(Math.round(originalPosition.x/10), Math.round(originalPosition.y/10));
+                                this.concentration[22+discretePosition.x][22+discretePosition.y] += 0.025; // or whatever small amount you want to add                                
+                            
+                            }  
+                        }
+
+                        tf.tidy(() => {
+                            let concentrationTensor = tf.tensor(this.concentration).reshape([1, 45, 45, 1]); // Convert the concentration to a tensor
+                            let iterations = 50; // Number of times to apply the convolution  
+                            for (let i = 0; i < iterations; i++) {
+                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensorX, 1, 'same');
+                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensorY, 1, 'same');
+                            }
+                            this.concentration = concentrationTensor.squeeze().arraySync(); // Convert back to array after the loop
+                        });
+                        
+                       // console.log(this.time_step/EveryNFrames);
+                    }
+                   
+                     if (settings.m_drawProfile) {
+                        let separation = 10; // The separation between points
+                        let size = 28.0; // The size of the point
+                        for (let i = 0; i <= 44; ++i) {
+                            for (let j = 0; j <= 44; ++j) {
+                                let color = new b2.Color(1, 0, 1, this.concentration[i][j]); // The color depends on the concentration
+                                let position = new b2.Vec2(((i)-22) * separation, ((j)-22) * separation);
+                                testbed.g_debugDraw.DrawPoint(position, size, color);
+                            }
+                        }
+                        } 
+
+                        this.createCoordinates();
+
+
+
+
+
+                        if (this.stopGrowing == true) {
+                            for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
+                                if (body.GetType() === b2.BodyType.b2_dynamicBody) {
+                                        body.growthRate = 1;
+
+                                }
+                            }
+                            console.log("They're no longer growing");
+                        }
+
+                        if (this.startGrowing == true) {
+
+                        
+                            for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
+                                if (body.GetType() === b2.BodyType.b2_dynamicBody) {
+
+                                    
+                                    body.growthRate = 1.001+Math.random()*0.001;
+
+                                }
+                            }
+                            console.log("They're growing");
+                        }
+
+                             
+                        
+
+
+                        
+                    for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
+                        if (body.GetType() === b2.BodyType.b2_dynamicBody) {     
+
                                 let circlePositions = [];
                                 for (let fixture = body.GetFixtureList(); fixture; fixture = fixture.GetNext()) {
                                     const shape = fixture.GetShape();
@@ -108,10 +213,11 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                     const diff = new b2.Vec2(circlePositions[0].x - circlePositions[1].x, circlePositions[0].y - circlePositions[1].y);
                                     const length = diff.Length();
                                     let originalPosition = body.GetPosition();
-                                    let discretePosition = new b2.Vec2(Math.round(originalPosition.x/10), Math.round(originalPosition.y/10));
-                                    let senseConcentration = this.concentration[22+discretePosition.x][22+discretePosition.y];
+                                    //let discretePosition = new b2.Vec2(Math.round(originalPosition.x/10), Math.round(originalPosition.y/10));
 
-                                    body.myCustomColor = new b2.Color(0,senseConcentration*0.5,0);
+                                    //let senseConcentration = this.concentration[22+discretePosition.x][22+discretePosition.y];
+
+                                    
                                     if (length >= body.reproductiveLength) {
                                         let a=6*(1/4);
                                         let originalAngle = body.GetAngle();
@@ -120,8 +226,17 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                         let offset = new b2.Vec2(-factor * Math.sin(originalAngle), factor * Math.cos(originalAngle));
                                         let newPosition1 = new b2.Vec2(originalPosition.x - offset.x, originalPosition.y - offset.y);
                                         let newPosition2 = new b2.Vec2(originalPosition.x + offset.x, originalPosition.y + offset.y);
-                                        this.createBacteria(this.m_world, newPosition1, originalAngle, factor2, body.myCustomColor);
-                                        this.createBacteria(this.m_world, newPosition2, originalAngle, factor2, body.myCustomColor);
+                                        let newTag1;
+                                        let newTag2;
+                                        if(body.tag == "first") {
+                                            newTag1 = "first";
+                                            newTag2 = "none";
+                                        } else {
+                                            newTag1 = "none";
+                                            newTag2 = "none";
+                                        }
+                                        this.createBacteria(this.m_world, newPosition1, originalAngle, factor2, body.myCustomColor, body.myR, body.myI, body.myL, newTag1);
+                                        this.createBacteria(this.m_world, newPosition2, originalAngle, factor2, body.myCustomColor, body.myR, body.myI, body.myL , newTag2);
                                         body.userData = { destroy: true };
                                     }
                                 
@@ -142,63 +257,93 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                     // produce substance
                                     //this.concentration[22+discretePosition.x][22+discretePosition.y] =+ 0;
                                     
-                                    
-                                    
-
-                                
-                                    
+                               
 
 
-                                    if (originalPosition.x < -200 || originalPosition.x > 200 || originalPosition.y < -200 || originalPosition.y >200) {
-                                        body.userData = { destroy: true };
-                                    }
-                                    if (body.userData && body.userData.destroy) {
-                                        this.m_world.DestroyBody(body);
-                                    }
+                        
                             }
                            
                         }
 
+
+  
+
+
+ 
+                        let prod = 3.0; // (3.33 minutes^-1 acc to Zhuo Chen) 1 (0.84 minutes^-1 acc to Shristopher A. Voigt) (0.84 acc to Jennifer S. Hallinan
+                        let deg = 1.4e-2;  //  (3.33e-3 1/minute acc to Zhuo Chen) 1 (0.12 1/minute acc to Shristopher A. Voigt)
+                        let for_com =  3e-3; //  (5.33e-3 molecules^-1*min^-1 acc to Zhuo Chen)1 (9.06e-3 molecules^-1*min^-1 acc to Joseph A. Newman)
+                        let n_R = 4; 
+                        
+
+                        let EveryMFrames = 2;
+                      if (this.time_step % EveryMFrames == 0) {
                         for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
                             if (body.GetType() === b2.BodyType.b2_dynamicBody) {
+
 
                                 let originalPosition = body.GetPosition();
 
                                 let discretePosition = new b2.Vec2(Math.round(originalPosition.x/10), Math.round(originalPosition.y/10));
+                                let multiplicationFactor = 100; 
+                                // 100 works fine. It eventually transitions to a Low R state.
+                                // 200 is works 
+                                let Spo0A =  multiplicationFactor*this.concentration[22+discretePosition.x][22+discretePosition.y];
 
-                                this.concentration[22+discretePosition.x][22+discretePosition.y] =+ 0.75;
+                                let activation_L = 1 / (1 + Math.pow(body.myR / body.myKR, n_R));
+
+                                let activation_P1 = activation_L * Math.pow(Spo0A / body.myKA, n_R) / (1 + Math.pow(Spo0A / body.myKA, n_R));
+       
+
+                    
+                                let dR = prod               - deg * body.myR - for_com * body.myR * body.myI - for_com * body.myR * body.myL; 
+                                let dI = prod*activation_P1 - deg * body.myI - for_com * body.myR * body.myI;
+                                let dL = prod*activation_L  - deg * body.myL - for_com * body.myR * body.myL;
+                    
+                                body.myR += dR;
+                                body.myI += dI;
+                                body.myL += dL;
+                    
+                                let R = body.myR;
+                                let I = body.myI;
+                                let L = body.myL;
+                    
+                                body.myCustomColor = new b2.Color(R*0.005, I*0.01, L*0.01);
+                    
+                                if (body.tag == "first") {
+                               // console.log("R: " + R + " I: " + I + " L: " + L);
+                               // body.myCustomColor = new b2.Color(0, 1, 0.5);
+                                }
                             }
                         }
-                       // this.concentration[35][35] = 50; // Set the concentration at the center to 1
-                        this.createCoordinates();
+                        //console.log(this.time_step/EveryMFrames);
+                    } 
+
+                 
+
 
                         
-                        tf.tidy(() => {
-                            let concentrationTensor = tf.tensor(this.concentration).reshape([1, 45, 45, 1]); // Convert the concentration to a tensor
-                            let iterations = 30; // Number of times to apply the convolution
-                            for (let i = 0; i < iterations; i++) {
-                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensorX, 1, 'same');
-                                concentrationTensor = tf.conv2d(concentrationTensor, this.kernelTensorY, 1, 'same');
-                            }
-                            this.concentration = concentrationTensor.arraySync()[0]; // Convert back to array after the loop
-                        });
+    
+
+                    
 
 
-                        let size = 15.0; // The size of the point
-                        let separation = 10; // The separation between points
-                        if (settings.m_drawProfile) {
-                        for (let i = 0; i <= 44; ++i) {
-                            for (let j = 0; j <= 44; ++j) {
-                                let color = new b2.Color(1, 0, 1, this.concentration[i][j]); // The color depends on the concentration
-                                let position = new b2.Vec2(((i)-22) * separation, ((j)-22) * separation);
-                                testbed.g_debugDraw.DrawPoint(position, size, color);
-                            }
-                        }
-                        }
-
+                    for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
+                        if (body.GetType() === b2.BodyType.b2_dynamicBody) {   
+                            let originalPosition = body.GetPosition();
+                    if (originalPosition.x < -200 || originalPosition.x > 200 || originalPosition.y < -200 || originalPosition.y >200) {
+                        body.userData = { destroy: true };
                     }
-                   
+                    if (body.userData && body.userData.destroy) {
+                        this.m_world.DestroyBody(body);
+                    }
                 }
+            }
+        }     
+                }
+
+                
+                    
                 static Create() {
                     return new Pyramid();
                     

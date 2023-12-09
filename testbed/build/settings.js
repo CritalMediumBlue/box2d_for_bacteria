@@ -15,9 +15,9 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_testIndex = 0;
                     this.m_windowWidth = 1600;
                     this.m_windowHeight = 900;
-                    this.m_hertz = 8;
-                    this.m_velocityIterations = 3;
-                    this.m_positionIterations = 3;
+                    this.m_hertz = 2;
+                    this.m_velocityIterations = 2;
+                    this.m_positionIterations = 2;
                     // #if B2_ENABLE_PARTICLE
                     // Particle iterations are needed for numerical stability in particle
                     // simulations with small particles and relatively high gravity.
@@ -37,7 +37,7 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_drawCOMs = false;
                     this.m_drawControllers = true;
                     this.m_drawStats = true;
-                    this.m_drawProfile = false;
+                    this.m_drawProfile = true;
                     this.m_enableWarmStarting = true;
                     this.m_enableContinuous = true;
                     this.m_enableSubStepping = false;
@@ -52,9 +52,9 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_testIndex = 0;
                     this.m_windowWidth = 1600;
                     this.m_windowHeight = 900;
-                    this.m_hertz = 8;
-                    this.m_velocityIterations = 3;
-                    this.m_positionIterations = 3;
+                    this.m_hertz = 2;
+                    this.m_velocityIterations = 2;
+                    this.m_positionIterations = 2;
                     // #if B2_ENABLE_PARTICLE
                     // Particle iterations are needed for numerical stability in particle
                     // simulations with small particles and relatively high gravity.
@@ -76,7 +76,7 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_drawControllers = true;
                     // #endif
                     this.m_drawStats = true;
-                    this.m_drawProfile = false;
+                    this.m_drawProfile = true;
                     this.m_enableWarmStarting = true;
                     this.m_enableContinuous = true;
                     this.m_enableSubStepping = false;
