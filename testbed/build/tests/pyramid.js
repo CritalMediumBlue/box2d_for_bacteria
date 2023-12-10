@@ -297,8 +297,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
        
 
                     
-                                let dR = prod               - deg * body.myR - for_com * body.myR * body.myI - for_com * body.myR * body.myL; 
-                                let dI = prod*activation_P1 - deg * body.myI - for_com * body.myR * body.myI;
+                                let dR = prod                 - deg * body.myR - for_com * body.myR * body.myI - for_com * body.myR * body.myL; 
+                                let dI = prod  *activation_P1 - deg * body.myI - for_com * body.myR * body.myI;
                                 let dL = prod_L*activation_L  - deg * body.myL - for_com * body.myR * body.myL;
                     
                                 body.myR += dR*5;
@@ -312,8 +312,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                 body.myCustomColor = new b2.Color(Math.abs(R*0.00538-0.0789), I*9.677e-3, Math.abs(L*0.0116006-0.011259));
                     
                                 if (body.tag == "first") {
-                                //console.log("R: " + R + " I: " + I + " L: " + L + " Spo0A: "+Spo0A);
-                                //body.myCustomColor = new b2.Color(0, 1, 0.5);
+                                    console.log("R: " + R + " I: " + I + " L: " + L + " Spo0A: "+Spo0A);
+                                    body.myCustomColor = new b2.Color(0, 1, 0.5);
                                 }
                             }
                         }

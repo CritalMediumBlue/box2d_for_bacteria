@@ -15,7 +15,7 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_testIndex = 0;
                     this.m_windowWidth = 1600;
                     this.m_windowHeight = 900;
-                    this.m_hertz = 2;
+                    this.m_hertz = 3;
                     this.m_velocityIterations = 2;
                     this.m_positionIterations = 2;
                     // #if B2_ENABLE_PARTICLE
@@ -52,7 +52,7 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_testIndex = 0;
                     this.m_windowWidth = 1600;
                     this.m_windowHeight = 900;
-                    this.m_hertz = 2;
+                    this.m_hertz = 3;
                     this.m_velocityIterations = 2;
                     this.m_positionIterations = 2;
                     // #if B2_ENABLE_PARTICLE
