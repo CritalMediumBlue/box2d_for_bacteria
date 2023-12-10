@@ -27,7 +27,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     super();
                     this.m_world.SetGravity(new b2.Vec2(0, 0));
                     for (let i = 0; i < 1; ++i) {
-                        this.createBacteria(this.m_world, new b2.Vec2(0.0, 0.0), 7*Math.PI/4 ,6,new b2.Color(0.5, 0.5, 0.5), 196.81, 0, 1.24, "first");
+                        this.createBacteria(this.m_world, new b2.Vec2(0.0, 0.0), 7*Math.PI/4 ,6,new b2.Color(0.5, 0.5, 0.5), 200.3932, 0, 0.9705701, "first");
                     }
                     this.createGrid(); // Create the grid for the concentration
                     this.time_step = 0;
@@ -63,7 +63,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         circleShape.m_p.Set(0, dy);
                         body.CreateFixture(circleFixtureDef);
                     });
-                    body.growthRate = 1.001+Math.random()*0.001; 
+                    body.growthRate = 1.002+Math.random()*0.001; 
                     body.reproductiveLength = 8*a+Math.random()*0.1;
                     body.myCustomColor = myColor;
                     body.myR = myR;
@@ -71,8 +71,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     body.myL = myL;
                     body.tag = tag;
                     
-                    body.myKA = 100 + (Math.random()-0.5)*5;
-                    body.myKR = 110 + (Math.random()-0.5)*5;
+                    body.myKA = 100+ (Math.random()-0.5)*5;
+                    body.myKR = 110+ (Math.random()-0.5)*5;
                     return body;
                 }
 
@@ -122,14 +122,14 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     super.Step(settings);
                     if (!settings.m_pause) {
                         this.time_step += 1;
-                        let EveryNFrames = 100;
+                        const EveryNFrames = 100;
                         if (this.time_step % EveryNFrames == 0) {
                         for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
                             if (body.GetType() === b2.BodyType.b2_dynamicBody) {
 
                                 let originalPosition = body.GetPosition();
                                 let discretePosition = new b2.Vec2(Math.round(originalPosition.x/10), Math.round(originalPosition.y/10));
-                                this.concentration[22+discretePosition.x][22+discretePosition.y] += 0.025; // or whatever small amount you want to add                                
+                                this.concentration[22+discretePosition.x][22+discretePosition.y] += 0.03; // or whatever small amount you want to add                                
                             
                             }  
                         }
@@ -182,7 +182,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                 if (body.GetType() === b2.BodyType.b2_dynamicBody) {
 
                                     
-                                    body.growthRate = 1.001+Math.random()*0.001;
+                                    body.growthRate = 1.005+Math.random()*0.001;
 
                                 }
                             }
@@ -271,13 +271,14 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
  
                         let prod = 3.0; // (3.33 minutes^-1 acc to Zhuo Chen) 1 (0.84 minutes^-1 acc to Shristopher A. Voigt) (0.84 acc to Jennifer S. Hallinan
+                        let prod_L =2.5;
                         let deg = 1.4e-2;  //  (3.33e-3 1/minute acc to Zhuo Chen) 1 (0.12 1/minute acc to Shristopher A. Voigt)
-                        let for_com =  3e-3; //  (5.33e-3 molecules^-1*min^-1 acc to Zhuo Chen)1 (9.06e-3 molecules^-1*min^-1 acc to Joseph A. Newman)
+                        let for_com =  1e-3; //  (5.33e-3 molecules^-1*min^-1 acc to Zhuo Chen)1 (9.06e-3 molecules^-1*min^-1 acc to Joseph A. Newman)
                         let n_R = 4; 
                         
 
-                        let EveryMFrames = 2;
-                      if (this.time_step % EveryMFrames == 0) {
+                        
+                      if (this.time_step % (EveryNFrames/10) == 0) {
                         for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
                             if (body.GetType() === b2.BodyType.b2_dynamicBody) {
 
@@ -298,21 +299,21 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     
                                 let dR = prod               - deg * body.myR - for_com * body.myR * body.myI - for_com * body.myR * body.myL; 
                                 let dI = prod*activation_P1 - deg * body.myI - for_com * body.myR * body.myI;
-                                let dL = prod*activation_L  - deg * body.myL - for_com * body.myR * body.myL;
+                                let dL = prod_L*activation_L  - deg * body.myL - for_com * body.myR * body.myL;
                     
-                                body.myR += dR;
-                                body.myI += dI;
-                                body.myL += dL;
+                                body.myR += dR*5;
+                                body.myI += dI*5;
+                                body.myL += dL*5;
                     
                                 let R = body.myR;
                                 let I = body.myI;
                                 let L = body.myL;
                     
-                                body.myCustomColor = new b2.Color(R*0.005, I*0.01, L*0.01);
+                                body.myCustomColor = new b2.Color(Math.abs(R*0.00538-0.0789), I*9.677e-3, Math.abs(L*0.0116006-0.011259));
                     
                                 if (body.tag == "first") {
-                               // console.log("R: " + R + " I: " + I + " L: " + L);
-                               // body.myCustomColor = new b2.Color(0, 1, 0.5);
+                                //console.log("R: " + R + " I: " + I + " L: " + L + " Spo0A: "+Spo0A);
+                                //body.myCustomColor = new b2.Color(0, 1, 0.5);
                                 }
                             }
                         }
