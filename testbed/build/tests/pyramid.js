@@ -71,8 +71,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     body.myL = myL;
                     body.tag = tag;
                     
-                    body.myKA = 100+ (Math.random()-0.5)*5;
-                    body.myKR = 110+ (Math.random()-0.5)*5;
+                    body.myKA = 100+ (Math.random()-0.5)*7;
+                    body.myKR = 110+ (Math.random()-0.5)*7;
                     return body;
                 }
 
