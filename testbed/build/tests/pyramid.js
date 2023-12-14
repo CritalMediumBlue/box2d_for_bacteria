@@ -71,8 +71,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     body.myL = myL;
                     body.tag = tag;
                     
-                    body.myKA = 100+ (Math.random()-0.5)*7;
-                    body.myKR = 110+ (Math.random()-0.5)*7;
+                    body.myKA = 100+ (Math.random()-0.5)*5;
+                    body.myKR = 110+ (Math.random()-0.5)*5;
                     return body;
                 }
 
@@ -301,15 +301,15 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                 let dI = prod  *activation_P1 - deg * body.myI - for_com * body.myR * body.myI;
                                 let dL = prod_L*activation_L  - deg * body.myL - for_com * body.myR * body.myL;
                     
-                                body.myR += dR*5;
-                                body.myI += dI*5;
-                                body.myL += dL*5;
+                                body.myR += dR*9.1;
+                                body.myI += dI*9.1;
+                                body.myL += dL*9.1;
                     
                                 let R = body.myR;
                                 let I = body.myI;
                                 let L = body.myL;
                     
-                                body.myCustomColor = new b2.Color(Math.abs(R*0.00538-0.0789), I*9.677e-3, Math.abs(L*0.0116006-0.011259));
+                                body.myCustomColor = new b2.Color(Math.abs(R*0.00543-0.087), I*0.0111, L*0.0125);
                     
                                 if (body.tag == "first") {
                                     console.log("R: " + R + " I: " + I + " L: " + L + " Spo0A: "+Spo0A);
