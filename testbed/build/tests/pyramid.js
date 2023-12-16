@@ -86,7 +86,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     
                     body.myKA = 100+ (Math.random()-0.5)*5;
                     body.myKR = 110+ (Math.random()-0.5)*5;
-                    body.myX_sensor = 130 + (Math.random()-0.5)*100;
+                    body.myX_sensor = 100 + (Math.random()-0.5)*100;
                     return body;
                 }
 
@@ -100,6 +100,10 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     let p21 = new b2.Vec2(220, 220);
                     let p31 = new b2.Vec2(220, -220);
                     let p41 = new b2.Vec2(-220, -220);
+                    let p45 = new b2.Vec2(-220-220, -220);
+                    let p51 = new b2.Vec2(-220-220, 220);
+                    let p6 = new b2.Vec2(-220-220, 0);
+                    let p7 = new b2.Vec2(-220, 0);
                     testbed.g_debugDraw.DrawSegment(p1, p2, new b2.Color(0, 0, 0));
                     testbed.g_debugDraw.DrawSegment(p2, p3, new b2.Color(0, 0, 0)); 
                     testbed.g_debugDraw.DrawSegment(p3, p4, new b2.Color(0, 0, 0));
@@ -107,7 +111,11 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     testbed.g_debugDraw.DrawSegment(p11, p21, new b2.Color(0, 0, 0));
                     testbed.g_debugDraw.DrawSegment(p21, p31, new b2.Color(0, 0, 0)); 
                     testbed.g_debugDraw.DrawSegment(p31, p41, new b2.Color(0, 0, 0));
-                    testbed.g_debugDraw.DrawSegment(p41, p11, new b2.Color(0, 0, 0));              
+                    testbed.g_debugDraw.DrawSegment(p41, p11, new b2.Color(0, 0, 0));  
+                    testbed.g_debugDraw.DrawSegment(p41, p45, new b2.Color(0, 0, 0));   
+                    testbed.g_debugDraw.DrawSegment(p11, p51, new b2.Color(0, 0, 0)); 
+                    testbed.g_debugDraw.DrawSegment(p45, p51, new b2.Color(0, 0, 0));  
+                    testbed.g_debugDraw.DrawSegment(p6, p7, new b2.Color(0, 0, 0));  
                  }
 
                 download_data() {
@@ -153,17 +161,17 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     if (!settings.m_pause) {
                         this.time_step += 1;
                         
-                        const EveryNFrames = 100;
+                        const EveryNFrames = 10;
                         if (this.time_step % EveryNFrames == 0) {
                         for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
                             if (body.GetType() === b2.BodyType.b2_dynamicBody) {
 
                                 let originalPosition = body.GetPosition();
                                 let discretePosition = new b2.Vec2(Math.round(originalPosition.x/10), Math.round(originalPosition.y/10));
-                                this.concentration[22+discretePosition.x][22+discretePosition.y] += 0.03; // or whatever small amount you want to add                                
+                                this.concentration[22+discretePosition.x][22+discretePosition.y] += 0.1; // or whatever small amount you want to add                                
                                 
                                 if (body.tag == "surfactin") {
-                                    this.concentration2[22+discretePosition.x][22+discretePosition.y] += 0.5;
+                                    this.concentration2[22+discretePosition.x][22+discretePosition.y] += 1;
                                    }
                                
                                 
@@ -178,7 +186,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                             // Concatenate the tensors along the batch dimension to create a batch
                             let batch = tf.concat([concentrationTensor, concentrationTensor2], 0);
 
-                            let iterations = 50; // Number of times to apply the convolution  
+                            let iterations = EveryNFrames*20; // Number of times to apply the convolution  
                             for (let i = 0; i < iterations; i++) {
                                 batch = tf.conv2d(batch, this.kernelTensorX, 1, 'same');
                                 batch = tf.conv2d(batch, this.kernelTensorY, 1, 'same');
@@ -342,7 +350,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         
 
                         
-                      if (this.time_step % (EveryNFrames/10) == 0) {
+                      if (this.time_step % EveryNFrames*2 == 0) {
                         for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
                             if (body.GetType() === b2.BodyType.b2_dynamicBody && body.tag != "surfactin") {
 
