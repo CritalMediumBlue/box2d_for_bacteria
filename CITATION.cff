@@ -1,0 +1,17 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Box2d.ts
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: 'Erin '
+    family-names: Catto
+repository-code: 'https://github.com/flyover/box2d.ts.git'
+abstract: A TypeScript port of Box2D.
+license: MIT
+commit: 7b387c368244fddde9cff9cbd643df3993aa698d
+date-released: '2023-06-29'
