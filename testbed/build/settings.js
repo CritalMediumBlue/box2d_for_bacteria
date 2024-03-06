@@ -15,14 +15,14 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_testIndex = 0;
                     this.m_windowWidth = 1600;
                     this.m_windowHeight = 900;
-                    this.m_hertz = 4;
-                    this.m_velocityIterations = 2;
-                    this.m_positionIterations = 2;
+                    this.m_hertz = 60;
+                    this.m_velocityIterations = 20;
+                    this.m_positionIterations = 20;
                     // #if B2_ENABLE_PARTICLE
                     // Particle iterations are needed for numerical stability in particle
                     // simulations with small particles and relatively high gravity.
                     // b2CalculateParticleIterations helps to determine the number.
-                    this.m_particleIterations = b2.CalculateParticleIterations(10, 0.04, 1 / this.m_hertz);
+                    this.m_particleIterations = 10;
                     // #endif
                     this.m_drawShapes = true;
                     // #if B2_ENABLE_PARTICLE
@@ -45,7 +45,7 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_pause = false;
                     this.m_singleStep = false;
                     // #if B2_ENABLE_PARTICLE
-                    this.m_strictContacts = false;
+                    this.m_strictContacts = true;
                 }
                 // #endif
                 Reset() {
@@ -78,7 +78,7 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_drawStats = true;
                     this.m_drawProfile = true;
                     this.m_enableWarmStarting = true;
-                    this.m_enableContinuous = true;
+                    this.m_enableContinuous = false;
                     this.m_enableSubStepping = false;
                     this.m_enableSleep = false;
                     this.m_pause = false;

@@ -28,7 +28,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     this.m_world.SetGravity(new b2.Vec2(0, 0));
                     
                     this.dynamicBodyCount = 0;
-                    for (let i = 0; i < 10; ++i) {
+                    for (let i = 0; i < 100; ++i) {
                         if (i == 0) {
                             this.createBacteria(this.m_world, new b2.Vec2(0.0, 0.0), 7*Math.PI/4 ,Math.random() * (12 - 6) + 6,new b2.Color(0.5, 0.5, 0.5), 200.3932, 0, 0.9705701, "first", 0.1);
                             this.dynamicBodyCount++;
