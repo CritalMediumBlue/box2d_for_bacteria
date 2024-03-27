@@ -25,7 +25,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     
 
                     super();
-                    this.m_world.SetGravity(new b2.Vec2(0, -0.025));
+                    this.m_world.SetGravity(new b2.Vec2(0, 0));
 
                     // Create the ground body
                     let groundBodyDef = new b2.BodyDef();
@@ -52,9 +52,9 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     this.dynamicBodyCount = 0;
                     // Define the area within which the bodies should be distributed
                     let minX = -49, maxX = 49; // X range
-                    let minY = 180, maxY = 199; // Y range
+                    let minY = 150, maxY = 199; // Y range
 
-                    for (let i = 0; i < 100; ++i) {
+                    for (let i = 0; i < 1000; ++i) {
                         // Generate a random position within the defined area
                         let x = Math.random() * (maxX - minX) + minX;
                         let y = Math.random() * (maxY - minY) + minY;
@@ -63,7 +63,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         let random_number=Math.random();
                         let angle = random_number * 2 * Math.PI;
 
-                        if (random_number < 0.01) {
+                        if (random_number < 0.04) {
                             this.createBacteria(this.m_world, new b2.Vec2(x, y), angle ,Math.random() * (3) + 3,new b2.Color(0.1, 0.8, 0.18),  "bac");
                             this.dynamicBodyCount++;
                         } else {
@@ -124,7 +124,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         if (distance <= maxDistance) {
                             const jd = new b2.DistanceJointDef();
                             let p1, p2, d;
-                            const frequencyHz = 0.2;
+                            const frequencyHz = 1;
                             const dampingRatio = 0.3;
                             
                             jd.bodyA = body;
@@ -148,34 +148,6 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                 }
 
 
-                createJoints(world, body1, body2, length1, length2) {
-                    const jd = new b2.DistanceJointDef();
-                    let p1, p2, d;
-                    const frequencyHz = 0.2;
-                    const dampingRatio = 0.3;
-
-                    
-                
-                    jd.bodyA = body1;
-                    jd.bodyB = body2;
-                    // Calculate linear stiffness and apply to the joint definition
-                    b2.LinearStiffness(jd, frequencyHz, dampingRatio, jd.bodyA, jd.bodyB);
-                    jd.localAnchorA.Set(0,  length1/2+0.4 );
-                    jd.localAnchorB.Set( 0, -length2/2-0.4 );
-                    
-                    // Calculating the natural length of the joint based on current positions
-                    p1 = jd.bodyA.GetWorldPoint(jd.localAnchorA, new b2.Vec2());
-                    p2 = jd.bodyB.GetWorldPoint(jd.localAnchorB, new b2.Vec2());
-                    d = b2.Vec2.SubVV(p2, p1, new b2.Vec2());
-                    jd.length = d.Length();
-                
-                    jd.collideConnected = true;
-                    
-                    // Create the joint in the world
-                    const joint = world.CreateJoint(jd);
-
-                    joint.creationTime = Date.now();
-                }
 
             createStaticJoints(world, body) {
                     // First, create a static ground body at the body's current position
@@ -205,11 +177,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     // Finally, create the joint in the world
                     world.CreateJoint(jd);
 
-                   
 
                     ground.SetUserData({ creationTime: Date.now() });
-
-
 
 
                 }   
@@ -302,18 +271,28 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                         body.userData = { destroy: true };
                                     }
 
-                                    if (originalPosition.x < -50 || originalPosition.x > 50 || originalPosition.y < 140 || originalPosition.y >200  || Math.random() < 0.005) {
+                                    if (originalPosition.x < -50 || originalPosition.x > 50 || originalPosition.y < 140 || originalPosition.y >200  || Math.random() < 0.001) {
                                         body.userData = { destroy: true };
                                     }
 
                    
 
-                                     if (Math.random() < 0.05){
+                                     if (Math.random() < 0.02){
                                         this.createJointsToNearbyBodies(this.m_world, body, 2);
                                     } 
 
-                                    if ( ( (originalPosition.y>185)  ||   (originalPosition.x < -35 || originalPosition.x > 35) ) && Math.random() < 0.20) {
+                                    if ( ( (originalPosition.y>190)  ||   (originalPosition.x < -40 || originalPosition.x > 40) ) && Math.random() < 0.20) {
                                         this.createStaticJoints(this.m_world, body);
+                                    }
+
+                                   /*  if ( ( (originalPosition.y>180)  ||   (originalPosition.x < -30 || originalPosition.x > 30) ) && Math.random() < 0.10) {
+                                        this.createStaticJoints(this.m_world, body);
+                                    } */
+
+                                    // Let's add a force to the bodies that exiting the area
+
+                                    if (originalPosition.x < 30 && originalPosition.x > -30 && originalPosition.y < 150) {
+                                        body.ApplyForce(new b2.Vec2(0, -0.005), body.GetWorldCenter());
                                     }
 
                                  
@@ -339,6 +318,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                             
                         
                     }
+
+
                     const JOINT_LIFETIME_MS = 4000;  // 1 second
 
                     // In your update loop...
