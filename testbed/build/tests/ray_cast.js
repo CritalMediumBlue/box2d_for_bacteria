@@ -49,6 +49,37 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     wallBody2.CreateFixture(wallEdge2, 0);
 
 
+                    // Let's create some static bodies with the shape of a triangle
+                    for(let i = 0; i < 12; i++) {
+                        let triangleBodyDef = new b2.BodyDef();
+                        triangleBodyDef.position.y = i * 5; // Adjust the multiplier as needed to space the triangles
+                        let triangleBody = this.m_world.CreateBody(triangleBodyDef);
+                        let triangleShape = new b2.PolygonShape();
+                        triangleShape.Set([new b2.Vec2(50, 140), new b2.Vec2(50, 142), new b2.Vec2(49.5, 141)], 3);
+                        triangleBody.CreateFixture(triangleShape, 0);
+                    }
+
+                    // Let's create some static bodies with the shape of a triangle
+                    for(let i = 0; i < 12; i++) {
+                        let triangleBodyDef = new b2.BodyDef();
+                        triangleBodyDef.position.y = i * 5; // Adjust the multiplier as needed to space the triangles
+                        let triangleBody = this.m_world.CreateBody(triangleBodyDef);
+                        let triangleShape = new b2.PolygonShape();
+                        triangleShape.Set([new b2.Vec2(-50, 140), new b2.Vec2(-50, 142), new b2.Vec2(-49.5, 141)], 3);
+                        triangleBody.CreateFixture(triangleShape, 0);
+                    }
+
+                        // Let's create some static bodies with the shape of a triangle
+                        for(let i = 0; i < 20; i++) {
+                            let triangleBodyDef = new b2.BodyDef();
+                            triangleBodyDef.position.x = i * 5; // Adjust the multiplier as needed to space the triangles
+                            let triangleBody = this.m_world.CreateBody(triangleBodyDef);
+                            let triangleShape = new b2.PolygonShape();
+                            triangleShape.Set([new b2.Vec2(-50, 200), new b2.Vec2(-48, 200), new b2.Vec2(-49, 199.5)], 3);
+                            triangleBody.CreateFixture(triangleShape, 0);
+                        }
+                    
+
                     this.dynamicBodyCount = 0;
                     // Define the area within which the bodies should be distributed
                     let minX = -49, maxX = 49; // X range
@@ -100,7 +131,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         circleShape.m_p.Set(0, dy);
                         body.CreateFixture(circleFixtureDef);
                     });
-                    body.growthRate = 1.0300;//1.0002;
+                    body.growthRate = 1.0300;//1.0300
                     body.reproductiveLength = 6 + (Math.random()-0.5)*2.5;
                     body.myCustomColor = myColor;
 
@@ -277,22 +308,17 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
                    
 
-                                     if (Math.random() < 0.02){
-                                        this.createJointsToNearbyBodies(this.m_world, body, 2);
-                                    } 
+                                      if (Math.random() < 0.02){
+                                        this.createJointsToNearbyBodies(this.m_world, body, 1.5);
+                                      }  
 
-                                    if ( ( (originalPosition.y>190)  ||   (originalPosition.x < -40 || originalPosition.x > 40) ) && Math.random() < 0.20) {
+                                    if ( ( (originalPosition.y>195)  ||   (originalPosition.x < -45 || originalPosition.x > 45) ) && Math.random() < 0.50) {
                                         this.createStaticJoints(this.m_world, body);
                                     }
 
-                                   /*  if ( ( (originalPosition.y>180)  ||   (originalPosition.x < -30 || originalPosition.x > 30) ) && Math.random() < 0.10) {
-                                        this.createStaticJoints(this.m_world, body);
-                                    } */
 
-                                    // Let's add a force to the bodies that exiting the area
-
-                                    if (originalPosition.x < 30 && originalPosition.x > -30 && originalPosition.y < 150) {
-                                        body.ApplyForce(new b2.Vec2(0, -0.005), body.GetWorldCenter());
+                                    if (originalPosition.x < 45 && originalPosition.x > -45 && originalPosition.y < 145) {
+                                        body.ApplyForce(new b2.Vec2(0, -0.004), body.GetWorldCenter());
                                     }
 
                                  
@@ -331,7 +357,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
  
 
-                    const BODY_LIFETIME_MS = 4000;  // 5 seconds
+                    const BODY_LIFETIME_MS = 1000;  
 
                     // In your update loop...
                     for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {

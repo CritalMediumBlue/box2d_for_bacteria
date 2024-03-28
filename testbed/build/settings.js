@@ -26,7 +26,7 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     // #endif
                     this.m_drawShapes = true;
                     // #if B2_ENABLE_PARTICLE
-                    this.m_drawParticles = true;
+                    this.m_drawParticles = false;
                     // #endif
                     this.m_drawJoints = true;
                     this.m_drawAABBs = false;
@@ -35,17 +35,17 @@ System.register(["@box2d"], function (exports_1, context_1) {
                     this.m_drawContactImpulse = false;
                     this.m_drawFrictionImpulse = false;
                     this.m_drawCOMs = false;
-                    this.m_drawControllers = true;
-                    this.m_drawStats = true;
-                    this.m_drawProfile = true;
+                    this.m_drawControllers = false;
+                    this.m_drawStats = false;
+                    this.m_drawProfile = false;
                     this.m_enableWarmStarting = true;
-                    this.m_enableContinuous = true;
+                    this.m_enableContinuous = false;
                     this.m_enableSubStepping = false;
                     this.m_enableSleep = false;
                     this.m_pause = false;
                     this.m_singleStep = false;
                     // #if B2_ENABLE_PARTICLE
-                    this.m_strictContacts = true;
+                    this.m_strictContacts = false;
                 }
                 // #endif
                 Reset() {
