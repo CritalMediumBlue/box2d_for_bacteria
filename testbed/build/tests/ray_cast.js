@@ -83,7 +83,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     this.dynamicBodyCount = 0;
                     // Define the area within which the bodies should be distributed
                     let minX = -49, maxX = 49; // X range
-                    let minY = 150, maxY = 199; // Y range
+                    let minY = 140, maxY = 199; // Y range
 
                     for (let i = 0; i < 1000; ++i) {
                         // Generate a random position within the defined area
@@ -131,7 +131,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         circleShape.m_p.Set(0, dy);
                         body.CreateFixture(circleFixtureDef);
                     });
-                    body.growthRate = 1.0300;//1.0300
+                    body.growthRate = 1.01300;//1.0300
                     body.reproductiveLength = 6 + (Math.random()-0.5)*2.5;
                     body.myCustomColor = myColor;
 
@@ -248,7 +248,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     if (!settings.m_pause) {
                         this.time_step += 1;
                         
-                        if (this.time_step % 50 === 0) {
+                        if (this.time_step % 25 === 0) {
 
                     
                     for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
@@ -308,9 +308,9 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
                    
 
-                                      if (Math.random() < 0.02){
-                                        this.createJointsToNearbyBodies(this.m_world, body, 1.5);
-                                      }  
+                                   /*    if (Math.random() < 0.01){
+                                        this.createJointsToNearbyBodies(this.m_world, body, 2);
+                                      }   */
 
                                     if ( ( (originalPosition.y>195)  ||   (originalPosition.x < -45 || originalPosition.x > 45) ) && Math.random() < 0.50) {
                                         this.createStaticJoints(this.m_world, body);
@@ -318,7 +318,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
 
                                     if (originalPosition.x < 45 && originalPosition.x > -45 && originalPosition.y < 145) {
-                                        body.ApplyForce(new b2.Vec2(0, -0.004), body.GetWorldCenter());
+                                        body.ApplyForce(new b2.Vec2(0, -0.002), body.GetWorldCenter());
                                     }
 
                                  
@@ -346,7 +346,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     }
 
 
-                    const JOINT_LIFETIME_MS = 4000;  // 1 second
+                    const JOINT_LIFETIME_MS = 500;  // 1 second
 
                     // In your update loop...
                     for (let joint = this.m_world.GetJointList(); joint; joint = joint.GetNext()) {
