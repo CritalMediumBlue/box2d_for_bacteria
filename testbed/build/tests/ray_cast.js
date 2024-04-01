@@ -131,7 +131,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         circleShape.m_p.Set(0, dy);
                         body.CreateFixture(circleFixtureDef);
                     });
-                    body.growthRate = 1.01300;//1.0300
+                    body.growthRate = 1.00400;//1.0300//1.006
                     body.reproductiveLength = 6 + (Math.random()-0.5)*2.5;
                     body.myCustomColor = myColor;
 
@@ -302,25 +302,25 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                         body.userData = { destroy: true };
                                     }
 
-                                    if (originalPosition.x < -50 || originalPosition.x > 50 || originalPosition.y < 140 || originalPosition.y >200  || Math.random() < 0.001) {
+                                    if (originalPosition.x < -50 || originalPosition.x > 50 || originalPosition.y < 140 || originalPosition.y >200  || Math.random() < 0.001*0.6) {
                                         body.userData = { destroy: true };
                                     }
 
                    
 
-                                   /*    if (Math.random() < 0.01){
-                                        this.createJointsToNearbyBodies(this.m_world, body, 2);
-                                      }   */
+                                       if (Math.random() < 0.02){
+                                        this.createJointsToNearbyBodies(this.m_world, body, 1.0);
+                                      }   
 
                                     if ( ( (originalPosition.y>195)  ||   (originalPosition.x < -45 || originalPosition.x > 45) ) && Math.random() < 0.50) {
                                         this.createStaticJoints(this.m_world, body);
                                     }
 
 
-                                    if (originalPosition.x < 45 && originalPosition.x > -45 && originalPosition.y < 145) {
-                                        body.ApplyForce(new b2.Vec2(0, -0.002), body.GetWorldCenter());
+                             /*        if (originalPosition.x < 45 && originalPosition.x > -45 && originalPosition.y < 145) {
+                                        body.ApplyForce(new b2.Vec2(0, -0.0008), body.GetWorldCenter());
                                     }
-
+ */
                                  
 
 
