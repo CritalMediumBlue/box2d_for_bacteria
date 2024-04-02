@@ -95,9 +95,11 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         let angle = random_number * 2 * Math.PI;
 
                         if (random_number < 0.04) {
+                            //angle = Math.PI*5;
                             this.createBacteria(this.m_world, new b2.Vec2(x, y), angle ,Math.random() * (3) + 3,new b2.Color(0.1, 0.8, 0.18),  "bac");
                             this.dynamicBodyCount++;
                         } else {
+                            //angle = Math.PI*5;
                             this.createBacteria(this.m_world, new b2.Vec2(x, y), angle ,Math.random() * (3) + 3,new b2.Color(0.3, 0.35, 0.3),  "bac");
                             this.dynamicBodyCount++;
                         }
@@ -110,6 +112,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
                     this.time_step = 0;
                     this.data=[];
+                    this.bodies_params = [];
                 }
 
      
@@ -131,7 +134,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         circleShape.m_p.Set(0, dy);
                         body.CreateFixture(circleFixtureDef);
                     });
-                    body.growthRate = 1.00400;//1.0300//1.006
+                    body.growthRate = 1//1.00400;//1.0300//1.006
                     body.reproductiveLength = 6 + (Math.random()-0.5)*2.5;
                     body.myCustomColor = myColor;
 
@@ -221,8 +224,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
 
                 download_data() {
-                    const header = 'bodyCount\ttimeStep';
-                    const dataRows = this.data.map(d => `${d.bodyCount}\t${d.timeStep}`);
+                    const header = 'x\ty\tangle\tlength\ttag\ttime';
+                    const dataRows = this.bodies_params.map(d => `${d.x}\t${d.y}\t${d.angle}\t${d.length}\t${d.tag}\t${d.time}`);
                     const dataStr = [header, ...dataRows].join('\n');
                     const dataBlob = new Blob([dataStr], {type: 'text/plain'});
                     const url = URL.createObjectURL(dataBlob);
@@ -270,11 +273,12 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                     const diff = new b2.Vec2(circlePositions[0].x - circlePositions[1].x, circlePositions[0].y - circlePositions[1].y);
                                     const length = diff.Length();
                                     let originalPosition = body.GetPosition();
+                                    let originalAngle = body.GetAngle();
+
              
                                     if (length >= body.reproductiveLength) {
                                         let a=0.4;
                                         let proportion = 0.3 + Math.random()*0.2;
-                                        let originalAngle = body.GetAngle();
                                         let factorA = proportion*(1/2)*length+(a/2);
                                         let factorB = (1-proportion)*(1/2)*length+(a/2);
                                         let factor2A = (length-(2*a))*proportion;
@@ -308,9 +312,9 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
                    
 
-                                       if (Math.random() < 0.02){
+                              /*          if (Math.random() < 0.02){
                                         this.createJointsToNearbyBodies(this.m_world, body, 1.0);
-                                      }   
+                                      }   */ 
 
                                     if ( ( (originalPosition.y>195)  ||   (originalPosition.x < -45 || originalPosition.x > 45) ) && Math.random() < 0.50) {
                                         this.createStaticJoints(this.m_world, body);
@@ -322,9 +326,21 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                     }
  */
                                  
+                                
+                                // lets push the bacteria paramters to the list
+                                let orientation;
+                                    if (originalAngle>0){
+                                        orientation =  (originalAngle/Math.PI) % 1;
+                                    } else {
+                                        orientation = 1 + (originalAngle/Math.PI) % 1;
+                                    }
+                                
+                                
 
+                                    if (this.time_step % 100 === 0) {
 
-
+                                this.bodies_params.push({x: originalPosition.x, y: originalPosition.y, angle: orientation, length: length, tag: body.tag, time: this.time_step});
+                                    }
             
                         
                             }
@@ -375,7 +391,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
 
 
-                    this.data.push({bodyCount: this.dynamicBodyCount, timeStep: this.time_step});
+                    //this.data.push({bodyCount: this.dynamicBodyCount, timeStep: this.time_step});
                 }
 
 
