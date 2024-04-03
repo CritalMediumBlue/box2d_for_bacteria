@@ -134,7 +134,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         circleShape.m_p.Set(0, dy);
                         body.CreateFixture(circleFixtureDef);
                     });
-                    body.growthRate = 1//1.00400;//1.0300//1.006
+                    body.growthRate = 1.00400;//1.0300//1.006
                     body.reproductiveLength = 6 + (Math.random()-0.5)*2.5;
                     body.myCustomColor = myColor;
 
