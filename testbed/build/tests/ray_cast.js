@@ -55,7 +55,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         triangleBodyDef.position.y = i * 5; // Adjust the multiplier as needed to space the triangles
                         let triangleBody = this.m_world.CreateBody(triangleBodyDef);
                         let triangleShape = new b2.PolygonShape();
-                        triangleShape.Set([new b2.Vec2(50, 140), new b2.Vec2(50, 142), new b2.Vec2(49.5, 141)], 3);
+                        triangleShape.Set([new b2.Vec2(50, 140), new b2.Vec2(50, 142), new b2.Vec2(49, 141)], 3);
                         triangleBody.CreateFixture(triangleShape, 0);
                     }
 
@@ -65,7 +65,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         triangleBodyDef.position.y = i * 5; // Adjust the multiplier as needed to space the triangles
                         let triangleBody = this.m_world.CreateBody(triangleBodyDef);
                         let triangleShape = new b2.PolygonShape();
-                        triangleShape.Set([new b2.Vec2(-50, 140), new b2.Vec2(-50, 142), new b2.Vec2(-49.5, 141)], 3);
+                        triangleShape.Set([new b2.Vec2(-50, 140), new b2.Vec2(-50, 142), new b2.Vec2(-49, 141)], 3);
                         triangleBody.CreateFixture(triangleShape, 0);
                     }
 
@@ -75,7 +75,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                             triangleBodyDef.position.x = i * 5; // Adjust the multiplier as needed to space the triangles
                             let triangleBody = this.m_world.CreateBody(triangleBodyDef);
                             let triangleShape = new b2.PolygonShape();
-                            triangleShape.Set([new b2.Vec2(-50, 200), new b2.Vec2(-48, 200), new b2.Vec2(-49, 199.5)], 3);
+                            triangleShape.Set([new b2.Vec2(-50, 200), new b2.Vec2(-48, 200), new b2.Vec2(-49, 199)], 3);
                             triangleBody.CreateFixture(triangleShape, 0);
                         }
                     
@@ -122,7 +122,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                     bd.position.Set(position.x, position.y);
                     bd.angle = angle; 
                     const body = world.CreateBody(bd);
-                    let a = 0.4; 
+                    let a = 0.5; 
                     let b = length/2; 
                     // Set restitution for the box
                     const boxFixtureDef = {shape: new b2.PolygonShape().SetAsBox(a, b), density: 0.0001, restitution: 0.0, friction: 0};
@@ -224,8 +224,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
 
                 download_data() {
-                    const header = 'x\ty\tangle\tlength\ttag\ttime';
-                    const dataRows = this.bodies_params.map(d => `${d.x}\t${d.y}\t${d.angle}\t${d.length}\t${d.tag}\t${d.time}`);
+                    const header = 'ox\toy\tx\ty\tangle\tlength\ttag\ttime';
+                    const dataRows = this.bodies_params.map(d => `${d.ox}\t${d.oy}\t${d.x}\t${d.y}\t${d.angle}\t${d.length}\t${d.tag}\t${d.time}`);
                     const dataStr = [header, ...dataRows].join('\n');
                     const dataBlob = new Blob([dataStr], {type: 'text/plain'});
                     const url = URL.createObjectURL(dataBlob);
@@ -277,7 +277,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
              
                                     if (length >= body.reproductiveLength) {
-                                        let a=0.4;
+                                        let a=0.5;
                                         let proportion = 0.3 + Math.random()*0.2;
                                         let factorA = proportion*(1/2)*length+(a/2);
                                         let factorB = (1-proportion)*(1/2)*length+(a/2);
@@ -316,8 +316,11 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                         this.createJointsToNearbyBodies(this.m_world, body, 1.0);
                                       }   */ 
 
-                                    if ( ( (originalPosition.y>195)  ||   (originalPosition.x < -45 || originalPosition.x > 45) ) && Math.random() < 0.50) {
+                                    if ( ( (originalPosition.y>190)  ||   (originalPosition.x < -40 || originalPosition.x > 40) ) && Math.random() < 0.70) {
                                         this.createStaticJoints(this.m_world, body);
+                                        body.growthRate = 1 + (0.00400 * 0.9)
+                                    } else {
+                                        body.growthRate = 1.00400;
                                     }
 
 
@@ -328,19 +331,38 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                  
                                 
                                 // lets push the bacteria paramters to the list
-                                let orientation;
-                                    if (originalAngle>0){
-                                        orientation =  (originalAngle/Math.PI) % 1;
-                                    } else {
-                                        orientation = 1 + (originalAngle/Math.PI) % 1;
-                                    }
+                               
                                 
                                 
 
-                                    if (this.time_step % 100 === 0) {
+                                  
 
-                                this.bodies_params.push({x: originalPosition.x, y: originalPosition.y, angle: orientation, length: length, tag: body.tag, time: this.time_step});
-                                    }
+                                   
+
+                                        if (this.time_step % 100 === 0) {
+                                            let orientation;
+                                            if (originalAngle>0){
+                                                orientation =  (originalAngle/Math.PI) % 1;
+                                            } else {
+                                                orientation = 1 + (originalAngle/Math.PI) % 1;
+                                            }
+                                            if (!body.userData) {
+                                                body.userData = {};
+                                            }
+                                               // Set the previous position in every iteration
+                                       
+                                            // Push the previous position to bodies_params
+                                            if (body.userData.lastPosition) {
+                                                this.bodies_params.push({ ox: body.userData.lastPosition.x, oy: body.userData.lastPosition.y ,x: originalPosition.x, y: originalPosition.y, angle: orientation, length: length, tag: body.tag, time: this.time_step });
+                                            }
+                                            
+                                            body.userData.lastPosition = { x: originalPosition.x, y: originalPosition.y };
+
+
+
+                                        }
+
+                                   
             
                         
                             }
