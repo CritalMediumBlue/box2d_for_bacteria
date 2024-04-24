@@ -75,7 +75,7 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
 
 {
     const shape = new b2.CircleShape();
-    shape.m_radius = 60; // set the radius of the circle
+    shape.m_radius = 5; // set the radius of the circle
     const pd = new b2.ParticleGroupDef();
     pd.flags = b2.ParticleFlag.b2_colorMixingParticle | b2.ParticleFlag.b2_viscousParticle | b2.ParticleFlag.b2_tensileParticle | b2.ParticleFlag.b2_powderParticle;
     pd.shape = shape;
@@ -103,7 +103,7 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                         const color = colors[i];
 
                         // If the blue component of the color is greater than 0.1, then apply a random force to the particle
-                        if (color.r > 0.3) {
+                        if (color.r > 0.25) {
                             const f = new b2.Vec2((Math.cos(color.g)) * 2000, (Math.sin(color.g) ) * 2000);
                             this.m_particleSystem.ParticleApplyForce(i, f);
                         } else if (Math.random() < 0.7){
