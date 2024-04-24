@@ -32,91 +32,90 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
             ParticlesSurfaceTension = class ParticlesSurfaceTension extends testbed.Test {
                 constructor() {
                     super(); // base class constructor
+         
+
                     {
-                        const bd = new b2.BodyDef();
-                        const ground = this.m_world.CreateBody(bd);
-                        {
-                            const shape = new b2.PolygonShape();
-                            const vertices = [
-                                new b2.Vec2(-4, -1),
-                                new b2.Vec2(4, -1),
-                                new b2.Vec2(4, 0),
-                                new b2.Vec2(-4, 0),
-                            ];
-                            shape.Set(vertices, 4);
-                            ground.CreateFixture(shape, 0.0);
+                        this.m_world.SetGravity(new b2.Vec2(0, 0));
+                    }
+                    this.m_particleSystem.SetRadius(0.035 * 20); 
+                    this.time_step=0
+                    //Let's create a container for the particles. We need 2 walls, a bottom and a roof
+                    //Let's create them as static lines
+
+                                // Create the ground body
+                                let groundBodyDef = new b2.BodyDef();
+                                let groundBody = this.m_world.CreateBody(groundBodyDef);
+                                let groundEdge = new b2.EdgeShape();
+                                groundEdge.SetTwoSided(new b2.Vec2(-200, 100), new b2.Vec2(200, 100));
+                                groundBody.CreateFixture(groundEdge, 0);
+
+                                // Create the roof body
+                                let roofBodyDef = new b2.BodyDef();
+                                let roofBody = this.m_world.CreateBody(roofBodyDef);
+                                let roofEdge = new b2.EdgeShape();
+                                roofEdge.SetTwoSided(new b2.Vec2(-200, -100), new b2.Vec2(200, -100));
+                                roofBody.CreateFixture(roofEdge, 0);
+            
+                                // Create the wall body
+                                let wallBodyDef = new b2.BodyDef();
+                                let wallBody = this.m_world.CreateBody(wallBodyDef);
+                                let wallEdge = new b2.EdgeShape();
+                                wallEdge.SetTwoSided(new b2.Vec2(200, 100), new b2.Vec2(200, -100));
+                                wallBody.CreateFixture(wallEdge, 0);
+            
+                                // Create the wall body
+                                let wallBodyDef2 = new b2.BodyDef();
+                                let wallBody2 = this.m_world.CreateBody(wallBodyDef2);
+                                let wallEdge2 = new b2.EdgeShape();
+                                wallEdge2.SetTwoSided(new b2.Vec2(-200, 100), new b2.Vec2(-200, -100));
+                                wallBody2.CreateFixture(wallEdge2, 0);
+
+
+
+
+{
+    const shape = new b2.CircleShape();
+    shape.m_radius = 30; // set the radius of the circle
+    const pd = new b2.ParticleGroupDef();
+    pd.flags = b2.ParticleFlag.b2_colorMixingParticle | b2.ParticleFlag.b2_viscousParticle | b2.ParticleFlag.b2_tensileParticle | b2.ParticleFlag.b2_powderParticle;
+    pd.shape = shape;
+    let rand= 0;
+    pd.color.Set(rand, -1000, 1-rand, 1);
+    this.m_particleSystem.CreateParticleGroup(pd);
+
+}
+              
+
+                }
+                Step(settings) {
+                    this.time_step+=1;  
+                   // console.log(this.time_step);
+
+                    super.Step(settings);
+
+                    const particleCount = this.m_particleSystem.GetParticleCount();
+                    if (this.time_step >100) {
+                    for (let i = 0; i < particleCount; i++) {
+                        // Get the colors of all particles
+                        const colors = this.m_particleSystem.GetColorBuffer();
+
+                        // Get the color of the particle i
+                        const color = colors[i];
+
+                        // If the blue component of the color is greater than 0.1, then apply a random force to the particle
+                        if (color.r > 0.3) {
+                            const f = new b2.Vec2((Math.cos(color.g)) * 200, (Math.sin(color.g) ) * 200);
+                            this.m_particleSystem.ParticleApplyForce(i, f);
+                        } else if (Math.random() < 0.7){
+                            // Get the velocities of all particles
+                            const velocities = this.m_particleSystem.GetVelocityBuffer();
+                            // set velocity of particle i to 0
+
+                            velocities[i].Set(0, 0);
+
                         }
-                        {
-                            const shape = new b2.PolygonShape();
-                            const vertices = [
-                                new b2.Vec2(-4, -0.1),
-                                new b2.Vec2(-2, -0.1),
-                                new b2.Vec2(-2, 2),
-                                new b2.Vec2(-4, 2),
-                            ];
-                            shape.Set(vertices, 4);
-                            ground.CreateFixture(shape, 0.0);
-                        }
-                        {
-                            const shape = new b2.PolygonShape();
-                            const vertices = [
-                                new b2.Vec2(2, -0.1),
-                                new b2.Vec2(4, -0.1),
-                                new b2.Vec2(4, 2),
-                                new b2.Vec2(2, 2),
-                            ];
-                            shape.Set(vertices, 4);
-                            ground.CreateFixture(shape, 0.0);
-                        }
-                    }
-                    this.m_particleSystem.SetRadius(0.035 * 2); // HACK: increase particle radius
-                    {
-                        const shape = new b2.CircleShape();
-                        shape.m_p.Set(0, 2);
-                        shape.m_radius = 0.5;
-                        const pd = new b2.ParticleGroupDef();
-                        pd.flags = b2.ParticleFlag.b2_tensileParticle | b2.ParticleFlag.b2_colorMixingParticle;
-                        pd.shape = shape;
-                        pd.color.Set(1, 0, 0, 1);
-                        this.m_particleSystem.CreateParticleGroup(pd);
-                    }
-                    {
-                        const shape = new b2.CircleShape();
-                        shape.m_p.Set(-1, 2);
-                        shape.m_radius = 0.5;
-                        const pd = new b2.ParticleGroupDef();
-                        pd.flags = b2.ParticleFlag.b2_tensileParticle | b2.ParticleFlag.b2_colorMixingParticle;
-                        pd.shape = shape;
-                        pd.color.Set(0, 1, 0, 1);
-                        this.m_particleSystem.CreateParticleGroup(pd);
-                    }
-                    {
-                        const shape = new b2.PolygonShape();
-                        const vertices = [
-                            new b2.Vec2(0, 3),
-                            new b2.Vec2(2, 3),
-                            new b2.Vec2(2, 3.5),
-                            new b2.Vec2(0, 3.5),
-                        ];
-                        shape.Set(vertices, 4);
-                        const pd = new b2.ParticleGroupDef();
-                        pd.flags = b2.ParticleFlag.b2_tensileParticle | b2.ParticleFlag.b2_colorMixingParticle;
-                        pd.shape = shape;
-                        pd.color.Set(0, 0, 1, 1);
-                        this.m_particleSystem.CreateParticleGroup(pd);
-                    }
-                    {
-                        const bd = new b2.BodyDef();
-                        bd.type = b2.BodyType.b2_dynamicBody;
-                        const body = this.m_world.CreateBody(bd);
-                        const shape = new b2.CircleShape();
-                        shape.m_p.Set(0, 8);
-                        shape.m_radius = 0.5;
-                        body.CreateFixture(shape, 0.5);
                     }
                 }
-                GetDefaultViewZoom() {
-                    return 0.1;
                 }
                 static Create() {
                     return new ParticlesSurfaceTension();
