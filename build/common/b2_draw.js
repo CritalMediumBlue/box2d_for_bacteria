@@ -121,14 +121,14 @@ System.register([], function (exports_1, context_1) {
                     b2Color.MixColors(this, mixColor, strength);
                 }
                 static MixColors(colorA, colorB, strength) {
-                    const dr = (strength * (colorB.r - colorA.r)*1);
-                    const dg = (strength * (colorB.g - colorA.g)*0.5);
+                    const dr = (strength * (colorB.r - colorA.r));
+                    const dg = (strength * (colorB.g - colorA.g));
                     const db = (strength * (colorB.b - colorA.b)*0.5);
                     const da = (strength * (colorB.a - colorA.a));
                     const f=0.014;
                     const k = 0.045;
                     colorA.r += dr - colorA.r*colorA.b**2 + f*(1-colorA.r)//+0.01*Math.random()**15;
-                    colorA.g += dg + 900*(Math.random()-0.5)**9;
+                    colorA.g += dg + 150*(16*((Math.random()-0.5)*(Math.random()-0.5)*(Math.random()-0.5)*(Math.random()-0.5)))**9;
                     colorA.b += db +  colorA.r*colorA.b**2 - colorA.b*(f+k) +0.01*Math.random()**13;
                     colorA.a += da;
                     colorB.r -= dr;

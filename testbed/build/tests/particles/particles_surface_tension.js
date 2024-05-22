@@ -46,28 +46,28 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                                 let groundBodyDef = new b2.BodyDef();
                                 let groundBody = this.m_world.CreateBody(groundBodyDef);
                                 let groundEdge = new b2.EdgeShape();
-                                groundEdge.SetTwoSided(new b2.Vec2(-200, 100), new b2.Vec2(200, 100));
+                                groundEdge.SetTwoSided(new b2.Vec2(- 300,  200), new b2.Vec2( 300,  200));
                                 groundBody.CreateFixture(groundEdge, 0);
 
                                 // Create the roof body
                                 let roofBodyDef = new b2.BodyDef();
                                 let roofBody = this.m_world.CreateBody(roofBodyDef);
                                 let roofEdge = new b2.EdgeShape();
-                                roofEdge.SetTwoSided(new b2.Vec2(-200, -100), new b2.Vec2(200, -100));
+                                roofEdge.SetTwoSided(new b2.Vec2(- 300, - 200), new b2.Vec2( 300, - 200));
                                 roofBody.CreateFixture(roofEdge, 0);
             
                                 // Create the wall body
                                 let wallBodyDef = new b2.BodyDef();
                                 let wallBody = this.m_world.CreateBody(wallBodyDef);
                                 let wallEdge = new b2.EdgeShape();
-                                wallEdge.SetTwoSided(new b2.Vec2(200, 100), new b2.Vec2(200, -100));
+                                wallEdge.SetTwoSided(new b2.Vec2( 300,  200), new b2.Vec2( 300, - 200));
                                 wallBody.CreateFixture(wallEdge, 0);
             
                                 // Create the wall body
                                 let wallBodyDef2 = new b2.BodyDef();
                                 let wallBody2 = this.m_world.CreateBody(wallBodyDef2);
                                 let wallEdge2 = new b2.EdgeShape();
-                                wallEdge2.SetTwoSided(new b2.Vec2(-200, 100), new b2.Vec2(-200, -100));
+                                wallEdge2.SetTwoSided(new b2.Vec2(- 300,  200), new b2.Vec2(- 300, - 200));
                                 wallBody2.CreateFixture(wallEdge2, 0);
 
 
@@ -75,7 +75,7 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
 
 {
     const shape = new b2.CircleShape();
-    shape.m_radius = 5; // set the radius of the circle
+    shape.m_radius = 50; // set the radius of the circle
     const pd = new b2.ParticleGroupDef();
     pd.flags = b2.ParticleFlag.b2_colorMixingParticle | b2.ParticleFlag.b2_viscousParticle | b2.ParticleFlag.b2_tensileParticle | b2.ParticleFlag.b2_powderParticle;
     pd.shape = shape;
@@ -94,19 +94,46 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                     super.Step(settings);
 
                     const particleCount = this.m_particleSystem.GetParticleCount();
-                    if (this.time_step >100) {
-                    for (let i = 0; i < particleCount; i++) {
-                        // Get the colors of all particles
-                        const colors = this.m_particleSystem.GetColorBuffer();
+                    let averagePosition;
+                    if (this.time_step >300) {
 
-                        // Get the color of the particle i
-                        const color = colors[i];
+                        let sumX = 0;
+                        let sumY = 0;
+                        const positions = this.m_particleSystem.GetPositionBuffer();
 
-                        // If the blue component of the color is greater than 0.1, then apply a random force to the particle
-                        if (color.r > 0.25) {
-                            const f = new b2.Vec2((Math.cos(color.g)) * 2000, (Math.sin(color.g) ) * 2000);
-                            this.m_particleSystem.ParticleApplyForce(i, f);
-                        } else if (Math.random() < 0.7){
+                        for (let i = 0; i < particleCount; i++) {
+                            sumX += positions[i].x;
+                            sumY += positions[i].y;
+                        }
+
+                        const averageX = sumX / particleCount;
+                        const averageY = sumY / particleCount;
+
+                        averagePosition = new b2.Vec2(averageX, averageY);
+
+
+                            for (let i = 0; i < particleCount; i++) {
+                                let C = this.m_particleSystem.GetPositionBuffer()[i];
+                                let B = new b2.Vec2(C.x - averagePosition.x, C.y - averagePosition.y);
+                                const colors = this.m_particleSystem.GetColorBuffer();
+                                const color = colors[i];
+
+                                if (color.r > color.b) {
+                                    const f = new b2.Vec2((Math.cos(color.g)) *2200, (Math.sin(color.g))*2200);
+                                    const dotProduct = f.x * B.x + f.y * B.y;
+                                    const magnitudeSquaredB = B.x * B.x + B.y * B.y;
+                                    const magnitudeB = Math.sqrt(magnitudeSquaredB); // Calculate the magnitude of B
+
+                                    // Project f onto B
+                                    const projection = dotProduct / magnitudeSquaredB;
+                                    const force = new b2.Vec2(B.x * projection, B.y * projection);
+
+                                    // Divide the force by the magnitude of B
+                                    const adjustedForce = new b2.Vec2(15*force.x / (2+magnitudeB),15*force.y / (2+magnitudeB));
+
+                                    this.m_particleSystem.ParticleApplyForce(i, force);
+                                }
+                            else if (Math.random() < 0.7){
                             // Get the velocities of all particles
                             const velocities = this.m_particleSystem.GetVelocityBuffer();
                             // set velocity of particle i to 0
@@ -116,6 +143,8 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                         }
                     }
                 }
+
+
                 }
                 static Create() {
                     return new ParticlesSurfaceTension();
