@@ -24,12 +24,14 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                 const COLOR = new b2.Color(0.3, 0.35, 0.3); // Color
                 const REPRODUCTION_PROPORTION_MIN = 0.3; // Minimum proportion of the parent's length for the child
                 const REPRODUCTION_PROPORTION_MAX = 0.2; // 0.3 + 0.2 = 0.5 maximum proportion of the parent's length for the child
-                const COLOR_CHANGE_PROBABILITY = 0.01;
-                const RANDOM_THRESHOLD = 0.001 * 0.6;
-                const JOINT_CREATION_THRESHOLD = 0.70;
-                const GROWTH_RATE = 1.00400;
-                const MODIFIED_GROWTH_RATE = 1 + (0.00400 * 0.9);
+                const RANDOM_THRESHOLD = 0.001 * 0.6*0.4;
+                const JOINT_CREATION_THRESHOLD = 0.0025;
+                const RATE = 0.002;
+                const GROWTH_RATE = 1 + RATE;
+                const MODIFIED_GROWTH_RATE = 1 + (RATE * 0.8);
                 const TIME_STEP_INTERVAL = 100;
+                const AIR_RESISTANCE = 0.007;
+                const ANGULAR_AIR_RESISTANCE = 0.007;
 
                 Pyramid = class Pyramid extends testbed.Test {
                     constructor() {
@@ -38,7 +40,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
                         this.dynamicBodyCount = 0;
 
-                        for (let i = 0; i < 1; ++i) {
+                        for (let i = 1; i <= 1000; ++i) {
                             // Generate a random position within the defined area
                             let x = Math.random() * (MAX_X - MIN_X) + MIN_X;
                             let y = Math.random() * (MAX_Y - MIN_Y) + MIN_Y;
@@ -47,9 +49,9 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                             let angle = Math.random() * 2 * Math.PI;
 
                             // Generate a random size within the defined range
-                            let size = Math.random() * (MAX_SIZE - MIN_SIZE) + MIN_SIZE;
+                            let size = 0.2*Math.random() * (MAX_SIZE - MIN_SIZE) + MIN_SIZE;
 
-                            this.createBacteria(this.m_world, new b2.Vec2(x, y), angle, size, COLOR, BigInt(1));
+                            this.createBacteria(this.m_world, new b2.Vec2(x, y), angle, size, COLOR, BigInt(i));
                             this.dynamicBodyCount++;
                         }
 
@@ -91,6 +93,19 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                                 shape.m_p.y *= body.growthRate;
                                                 circlePositions.push(shape.m_p);
                                             }
+                                            // Calculate the air resistance force
+                                            const velocity = body.GetLinearVelocity();
+                                            const airResistanceForce = new b2.Vec2(-AIR_RESISTANCE * velocity.x, -AIR_RESISTANCE * velocity.y);
+
+                                            // Apply the air resistance force to the body
+                                            body.ApplyForce(airResistanceForce, body.GetWorldCenter(), true);
+
+                                            // Calculate the air resistance torque
+                                            const angularVelocity = body.GetAngularVelocity();
+                                            const airResistanceTorque = -ANGULAR_AIR_RESISTANCE * angularVelocity;
+
+                                            // Apply the air resistance torque to the body
+                                            body.ApplyTorque(airResistanceTorque, true);
                                         }
                                         // Destructure circlePositions for readability
                                         const [{x: x1, y: y1}, {x: x2, y: y2}] = circlePositions;
@@ -124,10 +139,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                             const newTag1 = body.tag * BigInt(2);
                                             const newTag2 = newTag1 + BigInt(1);
 
-                                            // Change color with a certain probability
-                                            if (Math.random() < COLOR_CHANGE_PROBABILITY) {
-                                                body.myCustomColor = new b2.Color(0.1, 0.8, 0.18);
-                                            }
+                                       
 
                                             // Create new bacteria and increment body count
                                             this.createBacteria(this.m_world, newPosition1, originalAngle, factor2A, body.myCustomColor, newTag1);
@@ -144,13 +156,20 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                             body.userData = { destroy: true };
                                         }
 
-                                        const shouldCreateStaticJoints = (originalPosition.y > 190) || (originalPosition.x < MIN_X || originalPosition.x > MAX_X) && Math.random() < JOINT_CREATION_THRESHOLD;
-                                        if (shouldCreateStaticJoints) {
-                                            this.createStaticJoints(this.m_world, body);
+                                        const shouldCreateStaticJoints =( (Math.random() < JOINT_CREATION_THRESHOLD) && ((originalPosition.y > 180) || (originalPosition.x < MIN_X+20 || originalPosition.x > MAX_X-20 ) ) );
+                                        const Close_to_walls = (originalPosition.y > 180) || (originalPosition.x < MIN_X+20 || originalPosition.x > MAX_X-20 );
+                                        if (Close_to_walls) {
+                                            body.myCustomColor = new b2.Color(0.1, 0.8, 0.18);
                                             body.growthRate = MODIFIED_GROWTH_RATE;
+                                            if (Math.random() < JOINT_CREATION_THRESHOLD) {
+                                                this.createStaticJoints(this.m_world, body);
+                                            }
                                         } else {
+                                            body.myCustomColor = new b2.Color(0.8, 0.1, 0.6);
                                             body.growthRate = GROWTH_RATE;
                                         }
+
+                              
 
                                         if (this.time_step % TIME_STEP_INTERVAL === 0) {
                                             let orientation;
@@ -194,7 +213,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                 }
 
 
-                                const JOINT_LIFETIME_MS = 500;  // 1 second
+                                const JOINT_LIFETIME_MS =200000;  // 1 second
 
                                 for (let joint = this.m_world.GetJointList(); joint; joint = joint.GetNext()) {
                                     if (Date.now() - joint.creationTime >= JOINT_LIFETIME_MS) {
@@ -202,7 +221,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                     }
                                 }
 
-                                const BODY_LIFETIME_MS = 1000;  
+                                const BODY_LIFETIME_MS =200000;  
 
                                 for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
                                     const userData = body.GetUserData();
@@ -218,8 +237,8 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         }     
                     }
                     download_data() {
-                        const header = 'x\ty\tangle\tlength\tID\ttime';
-                        const dataRows = this.bodies_params.map(d => `${d.x}\t${d.y}\t${d.angle}\t${d.length}\t${d.tag}\t${d.time}`);
+                        const header = 'time\tx\ty\tangle\tlength\tID';
+                        const dataRows = this.bodies_params.map(d => `${d.time}\t${d.x}\t${d.y}\t${d.angle}\t${d.length}\t${d.tag}`);
                         const dataStr = [header, ...dataRows].join('\n');
                         const dataBlob = new Blob([dataStr], {type: 'text/plain'});
                         const url = URL.createObjectURL(dataBlob);
@@ -302,7 +321,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                             circleShape.m_p.Set(0, dy);
                             body.CreateFixture(circleFixtureDef);
                         });
-                        body.growthRate = 1.00400;//1.0300//1.006
+                        body.growthRate = GROWTH_RATE;
                         body.reproductiveLength = 6 + (Math.random()-0.5)*2.5;
                         body.myCustomColor = myColor;
                         body.tag = tag;
