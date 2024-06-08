@@ -24,11 +24,11 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                 const COLOR = new b2.Color(0.3, 0.35, 0.3); // Color
                 const REPRODUCTION_PROPORTION_MIN = 0.3; // Minimum proportion of the parent's length for the child
                 const REPRODUCTION_PROPORTION_MAX = 0.2; // 0.3 + 0.2 = 0.5 maximum proportion of the parent's length for the child
-                const RANDOM_THRESHOLD = 0.001 * 0.6*0.4;
+                const RANDOM_THRESHOLD = 0.001 * 0.15;
                 const JOINT_CREATION_THRESHOLD = 0.0025;
-                const RATE = 0.002;
+                const RATE = 0.002*0.8;
                 const GROWTH_RATE = 1 + RATE;
-                const MODIFIED_GROWTH_RATE = 1 + (RATE * 0.8);
+                const MODIFIED_GROWTH_RATE = 1 + (RATE * 1);
                 const TIME_STEP_INTERVAL = 100;
                 const AIR_RESISTANCE = 0.007;
                 const ANGULAR_AIR_RESISTANCE = 0.007;
@@ -156,7 +156,6 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                             body.userData = { destroy: true };
                                         }
 
-                                        const shouldCreateStaticJoints =( (Math.random() < JOINT_CREATION_THRESHOLD) && ((originalPosition.y > 180) || (originalPosition.x < MIN_X+20 || originalPosition.x > MAX_X-20 ) ) );
                                         const Close_to_walls = (originalPosition.y > 180) || (originalPosition.x < MIN_X+20 || originalPosition.x > MAX_X-20 );
                                         if (Close_to_walls) {
                                             body.myCustomColor = new b2.Color(0.1, 0.8, 0.18);
