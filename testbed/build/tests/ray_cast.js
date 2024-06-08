@@ -156,7 +156,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                             body.userData = { destroy: true };
                                         }
 
-                                        const Close_to_walls = (originalPosition.y > 180) || (originalPosition.x < MIN_X+20 || originalPosition.x > MAX_X-20 );
+                                        const Close_to_walls = (originalPosition.x < MIN_X+20 || originalPosition.x > MAX_X-20 );
                                         if (Close_to_walls) {
                                             body.myCustomColor = new b2.Color(0.1, 0.8, 0.18);
                                             body.growthRate = MODIFIED_GROWTH_RATE;
