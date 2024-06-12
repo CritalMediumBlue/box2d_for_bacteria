@@ -29,7 +29,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                 const RATE = 0.002*0.8;
                 const GROWTH_RATE = 1 + RATE;
                 const MODIFIED_GROWTH_RATE = 1 + (RATE * 1);
-                const TIME_STEP_INTERVAL = 100;
+                const TIME_STEP_INTERVAL = 300;
                 const AIR_RESISTANCE = 0.007;
                 const ANGULAR_AIR_RESISTANCE = 0.007;
 
