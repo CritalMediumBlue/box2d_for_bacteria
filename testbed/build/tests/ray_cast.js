@@ -188,7 +188,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                                                 angle: orientation,
                                                 length: length,
                                                 tag: body.tag,
-                                                time: this.time_step/100
+                                                time: this.time_step/TIME_STEP_INTERVAL
                                             });
                                             
 
