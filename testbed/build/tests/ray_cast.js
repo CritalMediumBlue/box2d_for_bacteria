@@ -40,7 +40,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
 
                         this.dynamicBodyCount = 0;
 
-                        for (let i = 1; i <= 100; ++i) {
+                        for (let i = 1; i <= 1000; ++i) {
                             // Generate a random position within the defined area
                             let x = Math.random() * (MAX_X - MIN_X) + MIN_X;
                             let y = Math.random() * (MAX_Y - MIN_Y) + MIN_Y;
@@ -51,7 +51,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                             // Generate a random size within the defined range
                             let size = 0.2*Math.random() * (MAX_SIZE - MIN_SIZE) + MIN_SIZE;
 
-                            this.createBacteria(this.m_world, new b2.Vec2(x, y), angle, size, COLOR, BigInt(i*100));
+                            this.createBacteria(this.m_world, new b2.Vec2(x, y), angle, size, COLOR, BigInt(1000+i));
                             this.dynamicBodyCount++;
                         }
 
