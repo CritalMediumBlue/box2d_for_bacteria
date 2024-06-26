@@ -29,7 +29,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                 const RATE = 0.002*0.8;
                 const GROWTH_RATE = 1 + RATE;
                 const MODIFIED_GROWTH_RATE = 1 + (RATE * 1);
-                const TIME_STEP_INTERVAL = 300;
+                const TIME_STEP_INTERVAL = 500;
                 const AIR_RESISTANCE = 0.007;
                 const ANGULAR_AIR_RESISTANCE = 0.007;
 
@@ -303,6 +303,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         vecs.forEach(vec => this.createBody(vec[0], vec[1]));
                     }
                     createBacteria(world, position, angle, length, myColor, tag) {
+                        const random = Math.random();
                         const bd = new b2.BodyDef();
                         bd.type = b2.BodyType.b2_dynamicBody;
                         bd.position.Set(position.x, position.y);
@@ -311,11 +312,11 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         let a = 0.5; 
                         let b = length/2; 
                         // Set restitution for the box
-                        const boxFixtureDef = {shape: new b2.PolygonShape().SetAsBox(a, b), density: 0.0001, restitution: 0.0, friction: 0};
+                        const boxFixtureDef = {shape: new b2.PolygonShape().SetAsBox(a, b), density: 0.0001, restitution: 0.0, friction: random};
                         body.CreateFixture(boxFixtureDef);
                         const circleShape = new b2.CircleShape(a); 
                         // Set restitution for the circles
-                        const circleFixtureDef = {shape: circleShape, density: 0.0001, restitution: 0.0, friction: 0};
+                        const circleFixtureDef = {shape: circleShape, density: 0.0001, restitution: 0.0, friction: random};
                         [-b, b].forEach(dy => {
                             circleShape.m_p.Set(0, dy);
                             body.CreateFixture(circleFixtureDef);
