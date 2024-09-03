@@ -29,7 +29,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                 const RATE = 0.002*0.8;
                 const GROWTH_RATE = 1 + RATE;
                 const MODIFIED_GROWTH_RATE = 1 + (RATE * 1);
-                const TIME_STEP_INTERVAL = 500;
+                const TIME_STEP_INTERVAL = 150;
                 const AIR_RESISTANCE = 0.007;
                 const ANGULAR_AIR_RESISTANCE = 0.007;
 
@@ -39,7 +39,7 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
                         this.m_world.SetGravity(new b2.Vec2(0, 0));
 
                         this.dynamicBodyCount = 0;
-
+ 
                         for (let i = 1; i <= 1000; ++i) {
                             // Generate a random position within the defined area
                             let x = Math.random() * (MAX_X - MIN_X) + MIN_X;
