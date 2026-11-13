@@ -33,6 +33,9 @@ Overlap check (cell-cell penetration depth, measured at every snapshot):
   --overlap-target F         target: max depth < F * cell width (default: ${OVERLAP_TARGET_FRACTION})
   --overlap-check            exit with status 3 if the target is missed after the warm-up
 
+Performance:
+  --timing-log FILE          write one CSV row per snapshot: step, cells, ms per step since the last snapshot
+
 The file is rewritten in full at each save, so it is always a complete, valid JSON file.
 Parameters, seed and progress are printed to stderr.`;
 
@@ -46,7 +49,7 @@ function parseArgs(argv: string[]) {
     steps: NaN, out: "states.json", saveEvery: 500, engine: DEFAULT_ENGINE as Engine,
     overrides: {} as Partial<SimulationParams>,
     overlapLog: null as string | null, overlapWarmup: OVERLAP_WARMUP_STEPS, overlapTarget: OVERLAP_TARGET_FRACTION,
-    overlapCheck: false,
+    overlapCheck: false, timingLog: null as string | null,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -87,6 +90,7 @@ function parseArgs(argv: string[]) {
         break;
       }
       case "--overlap-check": opts.overlapCheck = true; break;
+      case "--timing-log": opts.timingLog = value(); break;
       case "--list-params":
         for (const [k, v] of Object.entries(DEFAULT_PARAMS)) { console.log(`${k}=${v}`); }
         process.exit(0);
@@ -150,6 +154,14 @@ async function main(): Promise<void> {
       `= ${targetDepth.toFixed(3)} after step ${opts.overlapWarmup}`);
   }
 
+  // Step time (physics only: measured around sim.step(), excluding saving and the overlap check)
+  let timingFd: number | null = null;
+  let stepMs = 0, stepsTimed = 0;
+  if (opts.timingLog) {
+    timingFd = fs.openSync(path.resolve(opts.timingLog), "w");
+    fs.writeSync(timingFd, "step,cells,ms_per_step\n");
+  }
+
   let interrupted = false;
   process.on("SIGINT", () => { interrupted = true; }); // Ctrl+C: stop after the current step and save
 
@@ -157,7 +169,15 @@ async function main(): Promise<void> {
   let lastReport = start;
   let savedAtSnapshot = -1;
   for (let i = 0; i < opts.steps && !interrupted; i++) {
+    const t0 = performance.now();
     const snapshotTaken = sim.step();
+    stepMs += performance.now() - t0;
+    stepsTimed++;
+    if (snapshotTaken && timingFd !== null) {
+      fs.writeSync(timingFd, `${sim.stepCount},${sim.cellCount},${(stepMs / stepsTimed).toFixed(4)}\n`);
+      stepMs = 0;
+      stepsTimed = 0;
+    }
     if (snapshotTaken && overlapFd !== null) {
       last = meter.measure(sim, sim.params.radius, targetDepth);
       fs.writeSync(overlapFd, overlapCsvRow(last, width) + "\n");
@@ -190,6 +210,7 @@ async function main(): Promise<void> {
   console.error(`done in ${formatDuration(seconds)}, ${(sim.stepCount / seconds).toFixed(0)} steps/s average, ` +
     `${sim.cellCount} cells at the end (${sim.engine}, seed ${sim.params.seed})`);
 
+  if (timingFd !== null) { fs.closeSync(timingFd); }
   if (overlapFd !== null) {
     fs.closeSync(overlapFd);
     const pct = (d: number) => `${(d / width * 100).toFixed(2)}% of width (${d.toFixed(4)})`;

@@ -6,7 +6,8 @@
  *  - "phase":        phase-contrast microscopy look — dark cells with bright halos on grey, PDMS
  *                    walls around the chamber (default)
  *  - "fluorescence": cells glowing in the region colours (wall zone green, centre magenta) on black
- *  - "diagnostic":   flat colours, anchors and springs, and overlapping cells highlighted
+ *  - "diagnostic":   flat colours, anchors and springs, and overlapping cells highlighted (the
+ *                    viewer passes pairs deeper than 1% of the cell width: orange, red above the target)
  *
  * Each cell is drawn as one stroked segment with round caps (a capsule). Cells are batched into a
  * handful of paths per frame, and the per-frame cell buffer is reused, so drawing allocates little.
@@ -127,7 +128,7 @@ export class ChamberRenderer {
       this.strokeCells((k) => this.region[k] === r, `rgb(${255 * c.r},${255 * c.g},${255 * c.b})`, 2 * radius);
     }
 
-    // Overlapping cells: their axes, orange (any overlap) or red (deeper than the target)
+    // Overlapping cells (the pairs passed in): their axes, orange, or red when deeper than the target
     const o = options.overlaps;
     if (o) {
       for (const red of [false, true]) {

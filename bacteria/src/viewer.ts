@@ -18,6 +18,8 @@ import { OVERLAP_TARGET_FRACTION, OVERLAP_WARMUP_STEPS, OverlapMeter, OverlapSta
 import { ChamberRenderer, RENDER_STYLES, RenderStyle } from "./render.js";
 
 const AUTO_SAVE_EVERY_SNAPSHOTS = 500;
+/** Diagnostic view: overlaps deeper than this fraction of the cell width are highlighted. */
+const OVERLAP_VISIBLE_FRACTION = 0.01;
 const STATES_FILE_NAME = "states.json";
 
 /** Minimal typing for the File System Access API (Chrome/Edge). */
@@ -135,8 +137,10 @@ function render(): void {
   const targetDepth = OVERLAP_TARGET_FRACTION * 2 * radius;
   if (style === "diagnostic") {
     pairs.count = 0;
+    const visible = OVERLAP_VISIBLE_FRACTION * 2 * radius;
     meter.measure(sim, radius, targetDepth, (i, j, depth) => {
-      if (pairs.count === pairs.i.length) { return; } // enough to show
+      // Resting contacts sit ~0.1-0.5% deep (the engine's tolerance); show only deeper ones
+      if (depth < visible || pairs.count === pairs.i.length) { return; }
       pairs.i[pairs.count] = i; pairs.j[pairs.count] = j; pairs.depth[pairs.count] = depth; pairs.count++;
     });
   }
