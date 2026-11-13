@@ -160,7 +160,8 @@ export class ChamberRenderer {
     ctx.lineWidth = 1 / scale;
     ctx.stroke();
     ctx.fillStyle = "#000";
-    sim.forEachAnchor((x, y) => { ctx.fillRect(x - 0.2, y - 0.2, 0.4, 0.4); });
+    const marker = 5 / scale; // anchor squares: 5 px whatever the zoom
+    sim.forEachAnchor((x, y) => { ctx.fillRect(x - marker / 2, y - marker / 2, marker, marker); });
   }
 
   // ------------------------------------------------------------ pieces
