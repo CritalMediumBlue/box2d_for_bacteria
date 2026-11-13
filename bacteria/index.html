@@ -10,7 +10,10 @@
     header h1 { font-size: 16px; margin: 0 8px 0 0; }
     button { font: inherit; padding: 3px 10px; }
     input[type=number] { width: 6em; font: inherit; }
-    #status { font-variant-numeric: tabular-nums; color: #555; }
+    #status, #overlap { font-variant-numeric: tabular-nums; color: #555; }
+    #overlap.ok { color: #1a7f37; }
+    #overlap.bad { color: #c62828; font-weight: 600; }
+    select { font: inherit; }
     #canvas { flex: 1; width: 100%; min-height: 0; display: block; }
     kbd { border: 1px solid #ccc; border-radius: 3px; padding: 0 4px; font-size: 12px; }
   </style>
@@ -21,13 +24,27 @@
     <button id="pause" title="Space">Pause</button>
     <button id="step" title="N">Step</button>
     <button id="save" title="J">Save states…</button>
-    <label>Steps/frame <input id="speed" type="number" min="1" max="100" value="1"></label>
+    <label>Steps/frame <input id="speed" type="number" min="1" max="200" value="1"></label>
+    <label>View <select id="style">
+      <option value="phase">Phase contrast</option>
+      <option value="fluorescence">Fluorescence</option>
+      <option value="diagnostic">Diagnostic (overlaps)</option>
+    </select></label>
+    <label>Engine <select id="engine" title="Applies on Restart">
+      <option value="rapier">Rapier</option>
+      <option value="box2d">Box2D</option>
+    </select></label>
     <label>Seed <input id="seed" type="number" min="0" placeholder="random"></label>
-    <button id="restart" title="Restart with this seed (blank = random); unsaved states are lost">Restart</button>
+    <label title="Steps between snapshots (multiple of 25); applies on Restart">Snapshot every <input id="snapshotInterval" type="number" min="25" step="25" value="300"> steps</label>
+    <button id="restart" title="Restart with these settings (blank seed = random); unsaved states are lost">Restart</button>
     <span id="status"></span>
+    <span id="overlap"></span>
     <span style="color:#888"><kbd>Space</kbd> pause · <kbd>N</kbd> step · <kbd>J</kbd> save</span>
   </header>
   <canvas id="canvas"></canvas>
+  <script type="importmap">
+    { "imports": { "@dimforge/rapier2d-compat": "../node_modules/@dimforge/rapier2d-compat/dist/rapier.mjs" } }
+  </script>
   <script type="module" src="./build/viewer.js"></script>
 </body>
 </html>

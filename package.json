@@ -47,6 +47,7 @@
   },
   "homepage": "https://github.com/flyover/box2d.ts#readme",
   "dependencies": {
+    "@dimforge/rapier2d-compat": "0.21.0",
     "@types/systemjs": "^6.1.0"
   },
   "devDependencies": {

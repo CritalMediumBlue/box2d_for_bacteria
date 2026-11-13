@@ -2,23 +2,34 @@
  * Command-line runner: simulate without a browser and write states to disk.
  *
  *   node bacteria/build/run.js --steps 600000 --out states.json [--seed 42] [--save-every 500]
- *                              [--set rate=0.002 --set anchorLifetimeSteps=6000 ...]
+ *                              [--engine rapier|box2d] [--set rate=0.002 --set anchorLifetimeSteps=6000 ...]
+ *                              [--overlap-log overlap.csv [--overlap-check]]
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { BiofilmSimulation, DEFAULT_PARAMS, SimulationParams } from "./simulation.js";
+import { DEFAULT_ENGINE, createSimulation, isEngine } from "./engines.js";
+import { DEFAULT_PARAMS, ENGINES, Engine, Simulation, SimulationParams } from "./model.js";
+import { OVERLAP_CSV_HEADER, OverlapMeter, OverlapStats, overlapCsvRow } from "./overlap.js";
 
 const USAGE = `Usage: node bacteria/build/run.js --steps N [options]
 
 Options:
   --steps N         number of simulation steps to run (required)
   --out FILE        output file (default: states.json)
+  --engine NAME     physics engine: ${ENGINES.join(" or ")} (default: ${DEFAULT_ENGINE})
   --seed N          random seed (default: random; printed at start)
   --save-every N    also save after every N snapshots (default: 500; 0 = only at the end)
   --set KEY=VALUE   override a simulation parameter (repeatable), e.g. --set rate=0.002
   --list-params     print all parameters with their defaults and exit
   --help            show this help
+
+Overlap check (cell-cell penetration depth, measured at every snapshot):
+  --overlap-log FILE         write one CSV row per snapshot (max/mean/p99 depth, ...)
+  --overlap-warmup N         steps to let the random initial placement relax before the
+                             target applies (default: 3000)
+  --overlap-target F         target: max depth < F * cell width (default: 0.05)
+  --overlap-check            exit with status 3 if the target is missed after the warm-up
 
 The file is rewritten in full at each save, so it is always a complete, valid JSON file.
 Parameters, seed and progress are printed to stderr.`;
@@ -29,7 +40,11 @@ function fail(message: string): never {
 }
 
 function parseArgs(argv: string[]) {
-  const opts = { steps: NaN, out: "states.json", saveEvery: 500, overrides: {} as Partial<SimulationParams> };
+  const opts = {
+    steps: NaN, out: "states.json", saveEvery: 500, engine: DEFAULT_ENGINE as Engine,
+    overrides: {} as Partial<SimulationParams>,
+    overlapLog: null as string | null, overlapWarmup: 3000, overlapTarget: 0.05, overlapCheck: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const value = (): string => {
@@ -44,6 +59,12 @@ function parseArgs(argv: string[]) {
     switch (arg) {
       case "--steps": opts.steps = int(value()); break;
       case "--out": opts.out = value(); break;
+      case "--engine": {
+        const name = value();
+        if (!isEngine(name)) { fail(`unknown engine "${name}" (choose ${ENGINES.join(" or ")})`); }
+        opts.engine = name;
+        break;
+      }
       case "--seed": opts.overrides.seed = int(value()); break;
       case "--save-every": opts.saveEvery = int(value()); break;
       case "--set": {
@@ -54,6 +75,15 @@ function parseArgs(argv: string[]) {
         (opts.overrides as Record<string, number>)[key] = num;
         break;
       }
+      case "--overlap-log": opts.overlapLog = value(); break;
+      case "--overlap-warmup": opts.overlapWarmup = int(value()); break;
+      case "--overlap-target": {
+        const raw = value();
+        opts.overlapTarget = Number(raw);
+        if (!(opts.overlapTarget > 0)) { fail(`--overlap-target expects a positive number, got "${raw}"`); }
+        break;
+      }
+      case "--overlap-check": opts.overlapCheck = true; break;
       case "--list-params":
         for (const [k, v] of Object.entries(DEFAULT_PARAMS)) { console.log(`${k}=${v}`); }
         process.exit(0);
@@ -65,11 +95,12 @@ function parseArgs(argv: string[]) {
     }
   }
   if (Number.isNaN(opts.steps)) { fail("--steps is required"); }
+  if (opts.overlapCheck && !opts.overlapLog) { fail("--overlap-check needs --overlap-log"); }
   return opts;
 }
 
 /** Write the file piece by piece to a temp file, then rename: never leaves a half-written file. */
-function save(sim: BiofilmSimulation, out: string): void {
+function save(sim: Simulation, out: string): void {
   const tmp = `${out}.tmp`;
   const fd = fs.openSync(tmp, "w");
   try {
@@ -87,19 +118,34 @@ function formatDuration(seconds: number): string {
   return h > 0 ? `${h}h${String(m).padStart(2, "0")}m` : m > 0 ? `${m}m${String(s).padStart(2, "0")}s` : `${s}s`;
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const opts = parseArgs(process.argv.slice(2));
   const out = path.resolve(opts.out);
-  let sim: BiofilmSimulation;
+  let sim: Simulation;
   try {
-    sim = new BiofilmSimulation(opts.overrides);
+    sim = await createSimulation(opts.engine, opts.overrides);
   } catch (e) {
     fail(e instanceof Error ? e.message : String(e));
   }
 
-  console.error(`seed ${sim.params.seed}, ${opts.steps} steps, snapshot every ${sim.params.snapshotInterval} steps -> ${out}`);
+  console.error(`${sim.engine}, seed ${sim.params.seed}, ${opts.steps} steps, snapshot every ${sim.params.snapshotInterval} steps -> ${out}`);
   const changed = Object.entries(opts.overrides).filter(([k]) => k !== "seed");
   if (changed.length > 0) { console.error(`overrides: ${changed.map(([k, v]) => `${k}=${v}`).join(", ")}`); }
+
+  // Overlap check
+  const width = 2 * sim.params.radius;
+  const targetDepth = opts.overlapTarget * width;
+  const meter = new OverlapMeter();
+  let overlapFd: number | null = null;
+  let last: OverlapStats | null = null;
+  let worst: OverlapStats | null = null; // deepest after the warm-up
+  let snapshotsChecked = 0, snapshotsOverTarget = 0, meanSum = 0;
+  if (opts.overlapLog) {
+    overlapFd = fs.openSync(path.resolve(opts.overlapLog), "w");
+    fs.writeSync(overlapFd, OVERLAP_CSV_HEADER + "\n");
+    console.error(`overlap: logging to ${path.resolve(opts.overlapLog)}; target max depth < ${opts.overlapTarget} x width ` +
+      `= ${targetDepth.toFixed(3)} after step ${opts.overlapWarmup}`);
+  }
 
   let interrupted = false;
   process.on("SIGINT", () => { interrupted = true; }); // Ctrl+C: stop after the current step and save
@@ -109,6 +155,16 @@ function main(): void {
   let savedAtSnapshot = -1;
   for (let i = 0; i < opts.steps && !interrupted; i++) {
     const snapshotTaken = sim.step();
+    if (snapshotTaken && overlapFd !== null) {
+      last = meter.measure(sim, sim.params.radius, targetDepth);
+      fs.writeSync(overlapFd, overlapCsvRow(last, width) + "\n");
+      if (sim.stepCount >= opts.overlapWarmup) {
+        snapshotsChecked++;
+        meanSum += last.meanDepth;
+        if (last.maxDepth >= targetDepth) { snapshotsOverTarget++; }
+        if (!worst || last.maxDepth > worst.maxDepth) { worst = last; }
+      }
+    }
     if (snapshotTaken && opts.saveEvery > 0 && sim.states.snapshotCount % opts.saveEvery === 0) {
       save(sim, out);
       savedAtSnapshot = sim.states.snapshotCount;
@@ -119,14 +175,31 @@ function main(): void {
       const elapsed = (now - start) / 1000;
       const rate = sim.stepCount / elapsed;
       const eta = (opts.steps - sim.stepCount) / rate;
+      const overlap = last ? `, overlap max ${(last.maxDepth / width * 100).toFixed(1)}% / mean ${(last.meanDepth / width * 100).toFixed(2)}% of width` : "";
       console.error(`step ${sim.stepCount}/${opts.steps} (${(100 * sim.stepCount / opts.steps).toFixed(1)}%), ` +
-        `${sim.cellCount} cells, ${sim.states.snapshotCount} snapshots, ${rate.toFixed(0)} steps/s, ETA ${formatDuration(eta)}`);
+        `${sim.cellCount} cells, ${sim.states.snapshotCount} snapshots, ${rate.toFixed(0)} steps/s, ETA ${formatDuration(eta)}${overlap}`);
     }
   }
 
   if (interrupted) { console.error(`interrupted at step ${sim.stepCount}; saving...`); }
   if (sim.states.snapshotCount !== savedAtSnapshot) { save(sim, out); }
-  console.error(`done in ${formatDuration((Date.now() - start) / 1000)} (seed ${sim.params.seed})`);
+  const seconds = (Date.now() - start) / 1000;
+  console.error(`done in ${formatDuration(seconds)}, ${(sim.stepCount / seconds).toFixed(0)} steps/s average, ` +
+    `${sim.cellCount} cells at the end (${sim.engine}, seed ${sim.params.seed})`);
+
+  if (overlapFd !== null) {
+    fs.closeSync(overlapFd);
+    const pct = (d: number) => `${(d / width * 100).toFixed(2)}% of width (${d.toFixed(4)})`;
+    if (snapshotsChecked === 0) {
+      console.error(`overlap: no snapshots after the warm-up (step ${opts.overlapWarmup})`);
+    } else {
+      const passed = snapshotsOverTarget === 0;
+      console.error(`overlap after step ${opts.overlapWarmup}: ${snapshotsChecked} snapshots, worst max depth ${pct(worst!.maxDepth)} ` +
+        `at step ${worst!.step}, average mean depth ${pct(meanSum / snapshotsChecked)}, ` +
+        `${snapshotsOverTarget} snapshots over target -> ${passed ? "PASS" : "FAIL"}`);
+      if (!passed && opts.overlapCheck) { process.exitCode = 3; }
+    }
+  }
 }
 
-main();
+void main();

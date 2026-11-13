@@ -1,80 +1,25 @@
 /**
- * Microfluidic biofilm simulation: rod-shaped bacteria growing and dividing in a chamber.
+ * Microfluidic biofilm simulation on the Box2D port in ../../src (the original implementation).
  *
  * Pure model: no browser or Node APIs, so the same code runs in the viewer (viewer.ts)
- * and in the command-line runner (run.ts).
+ * and in the command-line runner (run.ts). Parameters and shared pieces are in model.ts.
  */
 
 import * as b2 from "../../build/esm/index.js";
+import {
+  CHAMBER, COLOR_CENTRE, COLOR_INITIAL, COLOR_WALL, DEFAULT_PARAMS, Point, RGB, Simulation, SimulationParams,
+  checkParams, orientationOf,
+} from "./model.js";
 import { Rng, mulberry32, randomSeed } from "./rng.js";
 import { CellState, StateRecorder } from "./states.js";
-
-/** All tunable parameters. Override any of them via the constructor (or `--set` in run.js). */
-export const DEFAULT_PARAMS = {
-  // --- physics stepping (same values the testbed used) ---
-  hertz: 60, // time step = 1 / hertz
-  velocityIterations: 20,
-  positionIterations: 20,
-  particleIterations: 10,
-
-  // --- chamber ---
-  minX: -50, maxX: 50, // cells leaving this range are removed
-  minY: 140, maxY: 200,
-
-  // --- initial population ---
-  initialCells: 1000,
-  minSize: 3, maxSize: 6, // initial length = minSize + 0.2 * U(0,1) * (maxSize - minSize)
-
-  // --- growth and division (applied every growthInterval steps) ---
-  growthInterval: 25,
-  rate: 0.002 * 0.8, // per growth event: length *= 1 + rate
-  wallRate: 0.002 * 0.8, // growth rate near the side walls
-  wallZone: 20, // "near the wall" = within this distance of minX / maxX
-  reproductionProportionMin: 0.3, // daughter 1 gets min + U(0,1) * range of the parent
-  reproductionProportionRange: 0.2,
-  reproductiveLengthMean: 6, // division length = mean + (U(0,1) - 0.5) * spread
-  reproductiveLengthSpread: 2.5,
-  randomDeathProbability: 0.001 * 0.15, // per cell per growth event
-
-  // --- drag (applied on growth steps only, once per fixture, as in the original test) ---
-  airResistance: 0.007,
-  angularAirResistance: 0.007,
-
-  // --- surface attachment near the walls ---
-  anchorProbability: 0.0025, // per cell per growth event, when near a wall
-  anchorFrequencyHz: 0.8,
-  anchorDampingRatio: 0.3,
-  // The testbed removed anchors after 200 s of *wall-clock* time. Here it is simulation
-  // steps: 12000 = 200 s at 60 steps/s (the testbed's maximum, one step per frame).
-  anchorLifetimeSteps: 12000,
-
-  // --- cell shape and material ---
-  radius: 0.5, // end-cap radius (half the cell width)
-  density: 0.0001,
-  restitution: 0.0,
-  // friction: each cell gets U(0,1)
-
-  // --- output ---
-  snapshotInterval: 300, // steps between saved snapshots (must be a multiple of growthInterval)
-};
-
-export type SimulationParams = typeof DEFAULT_PARAMS & { seed: number };
-
-const COLOR_INITIAL = new b2.Color(0.3, 0.35, 0.3);
-const COLOR_WALL = new b2.Color(0.1, 0.8, 0.18);
-const COLOR_CENTRE = new b2.Color(0.8, 0.1, 0.6);
 
 /** Extra per-body state attached to each bacterium. */
 interface Bacterium extends b2.Body {
   growthRate: number;
   reproductiveLength: number;
   id: number;
+  color: RGB;
   destroy?: boolean;
-}
-
-/** Orientation as a fraction of π in [0, 1]. */
-function orientationOf(angle: number): number {
-  return angle > 0 ? (angle / Math.PI) % 1 : 1 + (angle / Math.PI) % 1;
 }
 
 /** End-cap circle centres (local coordinates). */
@@ -89,7 +34,8 @@ function capCentres(body: b2.Body): b2.Vec2[] {
   return centres;
 }
 
-export class BiofilmSimulation {
+export class Box2DSimulation implements Simulation {
+  public readonly engine = "box2d";
   public readonly params: SimulationParams;
   public readonly world: b2.World;
   public readonly states: StateRecorder = new StateRecorder();
@@ -102,13 +48,7 @@ export class BiofilmSimulation {
   constructor(overrides: Partial<SimulationParams> = {}) {
     this.params = { ...DEFAULT_PARAMS, seed: randomSeed(), ...overrides };
     const p = this.params;
-    // Snapshots are only checked on growth steps, so other values would silently skip snapshots
-    if (!Number.isInteger(p.growthInterval) || p.growthInterval < 1) {
-      throw new Error(`growthInterval must be a positive integer (got ${p.growthInterval})`);
-    }
-    if (!Number.isInteger(p.snapshotInterval) || p.snapshotInterval < 1 || p.snapshotInterval % p.growthInterval !== 0) {
-      throw new Error(`snapshotInterval must be a positive multiple of growthInterval (${p.growthInterval}); got ${p.snapshotInterval}`);
-    }
+    checkParams(p);
     this.rng = mulberry32(p.seed);
 
     this.world = new b2.World(new b2.Vec2(0, 0));
@@ -125,14 +65,13 @@ export class BiofilmSimulation {
       this.createBacterium(new b2.Vec2(x, y), angle, size, COLOR_INITIAL, 0);
     }
 
-    // Rows of small triangles along the walls
-    this.createTrianglesY(12, [new b2.Vec2(50, 140), new b2.Vec2(50, 142), new b2.Vec2(49, 141)], [new b2.Vec2(-50, 140), new b2.Vec2(-50, 142), new b2.Vec2(-49, 141)]);
-    this.createTrianglesX(20, [new b2.Vec2(-50, 200), new b2.Vec2(-48, 200), new b2.Vec2(-49, 199)]);
-
-    // Container: top wall and two side walls (open at the bottom)
-    this.createEdge(new b2.Vec2(-50, 200), new b2.Vec2(50, 200));
-    this.createEdge(new b2.Vec2(50, 200), new b2.Vec2(50, 140));
-    this.createEdge(new b2.Vec2(-50, 200), new b2.Vec2(-50, 140));
+    // Chamber walls: rows of small triangles, then the top and side walls (open at the bottom)
+    for (const t of CHAMBER.triangles) {
+      this.createTriangle(t.offset.x, t.offset.y, t.vertices.map((v) => new b2.Vec2(v.x, v.y)));
+    }
+    for (const [v1, v2] of CHAMBER.edges) {
+      this.createEdge(new b2.Vec2(v1.x, v1.y), new b2.Vec2(v2.x, v2.y));
+    }
   }
 
   /** Number of bacteria currently in the world. */
@@ -142,6 +81,24 @@ export class BiofilmSimulation {
       if (b.GetType() === b2.BodyType.b2_dynamicBody) { n++; }
     }
     return n;
+  }
+
+  public forEachCell(fn: (x: number, y: number, angle: number, length: number, color: RGB, id: number) => void): void {
+    for (let b = this.world.GetBodyList(); b; b = b.GetNext()) {
+      if (b.GetType() !== b2.BodyType.b2_dynamicBody) { continue; }
+      const body = b as Bacterium;
+      const [c1, c2] = capCentres(body);
+      const position = body.GetPosition();
+      fn(position.x, position.y, body.GetAngle(), b2.Vec2.DistanceVV(c1, c2), body.color, body.id);
+    }
+  }
+
+  public forEachAnchor(fn: (x: number, y: number, cell: Point | null) => void): void {
+    for (let b = this.world.GetBodyList(); b; b = b.GetNext()) {
+      if (!b.GetUserData()) { continue; }
+      const edge = b.GetJointList(); // the anchor spring, if its cell still exists
+      fn(b.GetPosition().x, b.GetPosition().y, edge ? edge.other.GetPosition() : null);
+    }
   }
 
   /** Advance one simulation step. Returns true if a snapshot was taken. */
@@ -213,8 +170,8 @@ export class BiofilmSimulation {
         const position1 = new b2.Vec2(position.x - offsetB.x, position.y - offsetB.y);
         const position2 = new b2.Vec2(position.x + offsetA.x, position.y + offsetA.y);
 
-        this.createBacterium(position1, angle, lengthA, body.myCustomColor!, body.id);
-        this.createBacterium(position2, angle, lengthB, body.myCustomColor!, body.id);
+        this.createBacterium(position1, angle, lengthA, body.color, body.id);
+        this.createBacterium(position2, angle, lengthB, body.color, body.id);
         body.destroy = true;
       }
 
@@ -225,13 +182,13 @@ export class BiofilmSimulation {
 
       // Near the side walls: different growth rate, and a chance to attach to the surface
       if (position.x < p.minX + p.wallZone || position.x > p.maxX - p.wallZone) {
-        body.myCustomColor = COLOR_WALL;
+        body.color = COLOR_WALL;
         body.growthRate = 1 + p.wallRate;
         if (this.rng() < p.anchorProbability) {
           this.createAnchor(body);
         }
       } else {
-        body.myCustomColor = COLOR_CENTRE;
+        body.color = COLOR_CENTRE;
         body.growthRate = 1 + p.rate;
       }
     }
@@ -255,7 +212,7 @@ export class BiofilmSimulation {
     this.states.addSnapshot(cells);
   }
 
-  private createBacterium(position: b2.XY, angle: number, length: number, color: b2.Color, parentId: number): Bacterium {
+  private createBacterium(position: b2.XY, angle: number, length: number, color: RGB, parentId: number): Bacterium {
     const p = this.params;
     const friction = this.rng();
     const bd = new b2.BodyDef();
@@ -274,7 +231,7 @@ export class BiofilmSimulation {
     }
     body.growthRate = 1 + p.rate;
     body.reproductiveLength = p.reproductiveLengthMean + (this.rng() - 0.5) * p.reproductiveLengthSpread;
-    body.myCustomColor = color;
+    body.color = color;
     body.id = this.nextId++;
     this.states.addLineage(body.id, parentId);
     return body;
@@ -313,17 +270,5 @@ export class BiofilmSimulation {
     const shape = new b2.PolygonShape();
     shape.Set(vertices, 3);
     body.CreateFixture(shape, 0);
-  }
-
-  private createTrianglesX(count: number, ...triangles: b2.Vec2[][]): void {
-    for (let i = 0; i < count; i++) {
-      triangles.forEach((t) => this.createTriangle(i * 5, 0, t));
-    }
-  }
-
-  private createTrianglesY(count: number, ...triangles: b2.Vec2[][]): void {
-    for (let i = 0; i < count; i++) {
-      triangles.forEach((t) => this.createTriangle(0, i * 5, t));
-    }
   }
 }

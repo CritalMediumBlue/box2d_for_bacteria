@@ -1,17 +1,26 @@
 /**
- * Browser viewer: runs the simulation, draws it, and saves states.
+ * Browser viewer: runs the simulation, draws it (render.ts), measures overlaps, and saves states.
+ *
+ * URL parameters (all optional): engine=rapier|box2d, seed=N, style=phase|fluorescence|diagnostic,
+ * speed=steps per frame, and any simulation parameter by name (e.g. snapshotInterval=600).
  *
  * Saving ("J" or the button): in Chrome/Edge you pick a file once; it is written immediately and
  * overwritten automatically every AUTO_SAVE_EVERY_SNAPSHOTS snapshots. Without a picked file
  * (or in browsers without the picker), auto-save downloads numbered copies instead.
+ *
+ * For scripting (e.g. from a headless browser): window.biofilm exposes the simulation, the latest
+ * overlap stats, timing, and download().
  */
 
-import * as b2 from "../../build/esm/index.js";
-import { BiofilmSimulation } from "./simulation.js";
+import { DEFAULT_ENGINE, createSimulation, isEngine } from "./engines.js";
+import { DEFAULT_PARAMS, Engine, Simulation, SimulationParams } from "./model.js";
+import { OverlapMeter, OverlapStats } from "./overlap.js";
+import { ChamberRenderer, RENDER_STYLES, RenderStyle } from "./render.js";
 
 const AUTO_SAVE_EVERY_SNAPSHOTS = 500;
 const STATES_FILE_NAME = "states.json";
-const VIEW = { minX: -55, maxX: 55, minY: 135, maxY: 205 }; // world area to fit on screen
+/** Overlap target used for the readout: max depth < 5% of the cell width. */
+const OVERLAP_TARGET_FRACTION = 0.05;
 
 /** Minimal typing for the File System Access API (Chrome/Edge). */
 interface WritableFileHandle {
@@ -21,52 +30,95 @@ interface WritableFileHandle {
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 const canvas = $<HTMLCanvasElement>("canvas");
-const ctx = canvas.getContext("2d")!;
+const renderer = new ChamberRenderer(canvas.getContext("2d")!);
 const statusEl = $("status");
+const overlapEl = $("overlap");
 const pauseBtn = $<HTMLButtonElement>("pause");
 const speedInput = $<HTMLInputElement>("speed");
 const seedInput = $<HTMLInputElement>("seed");
+const engineSelect = $<HTMLSelectElement>("engine");
+const styleSelect = $<HTMLSelectElement>("style");
+const snapshotInput = $<HTMLInputElement>("snapshotInterval");
 
-let sim = createSimulation();
+// ---------------------------------------------------------------- settings from the URL
+
+const query = new URLSearchParams(location.search);
+const urlOverrides: Partial<SimulationParams> = {};
+for (const [key, value] of query) {
+  if (key in DEFAULT_PARAMS && value !== "" && !Number.isNaN(Number(value))) {
+    (urlOverrides as Record<string, number>)[key] = Number(value);
+  }
+}
+const urlEngine = query.get("engine");
+engineSelect.value = urlEngine && isEngine(urlEngine) ? urlEngine : DEFAULT_ENGINE;
+const urlStyle = query.get("style") as RenderStyle | null;
+styleSelect.value = urlStyle && RENDER_STYLES.includes(urlStyle) ? urlStyle : "phase";
+if (query.get("seed")) { seedInput.value = query.get("seed")!; }
+if (query.get("speed")) { speedInput.value = query.get("speed")!; }
+snapshotInput.value = String(urlOverrides.snapshotInterval ?? DEFAULT_PARAMS.snapshotInterval);
+
+// ---------------------------------------------------------------- state
+
+let sim: Simulation | null = null;
 let paused = false;
 let saveHandle: WritableFileHandle | null = null;
 let saving = false;
 let lastSaveInfo = "not saved yet";
-let rateSteps = 0;
-let rateTime = performance.now();
-let stepsPerSecond = 0;
+let rateSteps = 0, rateFrames = 0, rateTime = performance.now();
+let stepsPerSecond = 0, framesPerSecond = 0, stepMsPerFrame = 0, drawMsPerFrame = 0;
+const meter = new OverlapMeter();
+let lastOverlap: OverlapStats | null = null;
+const pairs = { i: new Int32Array(4096), j: new Int32Array(4096), depth: new Float64Array(4096), count: 0 };
 
-function createSimulation(): BiofilmSimulation {
+async function startSimulation(): Promise<void> {
   const seedText = seedInput.value.trim();
-  const s = new BiofilmSimulation(seedText === "" ? {} : { seed: Number(seedText) });
-  console.log(`Simulation started with seed ${s.params.seed}`);
-  return s;
+  const overrides: Partial<SimulationParams> = { ...urlOverrides, snapshotInterval: Number(snapshotInput.value) };
+  if (seedText !== "") { overrides.seed = Number(seedText); }
+  const engine = engineSelect.value as Engine;
+  try {
+    sim = await createSimulation(engine, overrides);
+  } catch (e) {
+    statusEl.textContent = `could not start: ${e instanceof Error ? e.message : String(e)}`;
+    console.error(e);
+    return;
+  }
+  lastOverlap = null;
+  console.log(`Simulation started: ${sim.engine}, seed ${sim.params.seed}`);
 }
 
 // ---------------------------------------------------------------- simulation loop
 
 function advance(steps: number): void {
+  if (!sim) { return; }
   for (let i = 0; i < steps; i++) {
     const snapshotTaken = sim.step();
     rateSteps++;
-    if (snapshotTaken && sim.states.snapshotCount % AUTO_SAVE_EVERY_SNAPSHOTS === 0) {
-      void saveStates(true);
+    if (snapshotTaken) {
+      lastOverlap = meter.measure(sim, sim.params.radius, OVERLAP_TARGET_FRACTION * 2 * sim.params.radius);
+      if (sim.states.snapshotCount % AUTO_SAVE_EVERY_SNAPSHOTS === 0) { void saveStates(true); }
     }
   }
 }
 
 function frame(): void {
+  const t0 = performance.now();
   if (!paused) {
-    const steps = Math.max(1, Math.min(100, Math.floor(Number(speedInput.value) || 1)));
+    const steps = Math.max(1, Math.min(200, Math.floor(Number(speedInput.value) || 1)));
     advance(steps);
   }
-  const now = performance.now();
-  if (now - rateTime >= 1000) {
-    stepsPerSecond = (rateSteps * 1000) / (now - rateTime);
-    rateSteps = 0;
-    rateTime = now;
-  }
+  const t1 = performance.now();
   render();
+  const t2 = performance.now();
+  stepMsPerFrame = 0.9 * stepMsPerFrame + 0.1 * (t1 - t0);
+  drawMsPerFrame = 0.9 * drawMsPerFrame + 0.1 * (t2 - t1);
+  rateFrames++;
+  if (t2 - rateTime >= 1000) {
+    stepsPerSecond = (rateSteps * 1000) / (t2 - rateTime);
+    framesPerSecond = (rateFrames * 1000) / (t2 - rateTime);
+    rateSteps = 0;
+    rateFrames = 0;
+    rateTime = t2;
+  }
   requestAnimationFrame(frame);
 }
 
@@ -79,91 +131,39 @@ function render(): void {
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
   }
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // World -> screen: fit VIEW, y pointing up
-  const scale = Math.min(canvas.width / (VIEW.maxX - VIEW.minX), canvas.height / (VIEW.maxY - VIEW.minY));
-  const cx = (VIEW.minX + VIEW.maxX) / 2, cy = (VIEW.minY + VIEW.maxY) / 2;
-  ctx.setTransform(scale, 0, 0, -scale, canvas.width / 2 - cx * scale, canvas.height / 2 + cy * scale);
-  ctx.lineWidth = 1 / scale;
-
-  const p = new b2.Vec2();
-  for (let body = sim.world.GetBodyList(); body; body = body.GetNext()) {
-    const xf = body.GetTransform();
-    const isCell = body.GetType() === b2.BodyType.b2_dynamicBody;
-    const c = body.myCustomColor;
-    ctx.fillStyle = isCell && c ? `rgb(${255 * c.r},${255 * c.g},${255 * c.b})` : "#9a9";
-    ctx.strokeStyle = isCell ? "rgba(0,0,0,0.6)" : "#575";
-
-    if (body.GetFixtureList() === null) {
-      // Anchor point (static body without fixtures)
-      ctx.fillStyle = "#000";
-      ctx.fillRect(xf.p.x - 0.25, xf.p.y - 0.25, 0.5, 0.5);
-      continue;
-    }
-
-    for (let f = body.GetFixtureList(); f; f = f.GetNext()) {
-      const shape = f.GetShape();
-      ctx.beginPath();
-      switch (shape.GetType()) {
-        case b2.ShapeType.e_polygonShape: {
-          const poly = shape as b2.PolygonShape;
-          for (let i = 0; i < poly.m_count; i++) {
-            b2.Transform.MulXV(xf, poly.m_vertices[i], p);
-            if (i === 0) { ctx.moveTo(p.x, p.y); } else { ctx.lineTo(p.x, p.y); }
-          }
-          ctx.closePath();
-          ctx.fill();
-          if (!isCell) { ctx.stroke(); }
-          break;
-        }
-        case b2.ShapeType.e_circleShape: {
-          const circle = shape as b2.CircleShape;
-          b2.Transform.MulXV(xf, circle.m_p, p);
-          ctx.arc(p.x, p.y, circle.m_radius, 0, 2 * Math.PI);
-          ctx.fill();
-          ctx.stroke();
-          break;
-        }
-        case b2.ShapeType.e_edgeShape: {
-          const edge = shape as b2.EdgeShape;
-          b2.Transform.MulXV(xf, edge.m_vertex1, p);
-          ctx.moveTo(p.x, p.y);
-          b2.Transform.MulXV(xf, edge.m_vertex2, p);
-          ctx.lineTo(p.x, p.y);
-          ctx.strokeStyle = "#333";
-          ctx.lineWidth = 2 / scale;
-          ctx.stroke();
-          ctx.lineWidth = 1 / scale;
-          break;
-        }
-      }
-    }
+  if (!sim) { return; }
+  const style = styleSelect.value as RenderStyle;
+  const radius = sim.params.radius;
+  const targetDepth = OVERLAP_TARGET_FRACTION * 2 * radius;
+  if (style === "diagnostic") {
+    pairs.count = 0;
+    meter.measure(sim, radius, targetDepth, (i, j, depth) => {
+      if (pairs.count === pairs.i.length) { return; } // enough to show
+      pairs.i[pairs.count] = i; pairs.j[pairs.count] = j; pairs.depth[pairs.count] = depth; pairs.count++;
+    });
   }
-
-  // Anchor springs
-  ctx.strokeStyle = "rgba(0,0,0,0.5)";
-  const a = new b2.Vec2(), b = new b2.Vec2();
-  for (let j = sim.world.GetJointList(); j; j = j.GetNext()) {
-    j.GetAnchorA(a);
-    j.GetAnchorB(b);
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-  }
+  renderer.draw(sim, { style, radius, overlaps: style === "diagnostic" ? pairs : undefined, targetDepth });
 
   statusEl.textContent =
     `step ${sim.stepCount} · ${sim.cellCount} cells · ${sim.states.snapshotCount} snapshots · ` +
-    `${stepsPerSecond.toFixed(0)} steps/s · seed ${sim.params.seed} · ${lastSaveInfo}`;
+    `${stepsPerSecond.toFixed(0)} steps/s · ${framesPerSecond.toFixed(0)} fps ` +
+    `(step ${stepMsPerFrame.toFixed(1)} ms + draw ${drawMsPerFrame.toFixed(1)} ms per frame) · ` +
+    `${sim.engine} · seed ${sim.params.seed} · ${lastSaveInfo}`;
+  if (lastOverlap) {
+    const width = 2 * radius;
+    const max = lastOverlap.maxDepth / width * 100, mean = lastOverlap.meanDepth / width * 100;
+    overlapEl.textContent = `overlap at step ${lastOverlap.step}: max ${max.toFixed(1)}% · mean ${mean.toFixed(2)}% of cell width`;
+    overlapEl.className = max < OVERLAP_TARGET_FRACTION * 100 ? "ok" : "bad";
+  } else {
+    overlapEl.textContent = "overlap: measured at each snapshot";
+    overlapEl.className = "";
+  }
 }
 
 // ---------------------------------------------------------------- saving
 
 function buildBlob(): Blob {
-  return new Blob(sim.states.toPieces(), { type: "application/json" });
+  return new Blob(sim!.states.toPieces(), { type: "application/json" });
 }
 
 function download(blob: Blob, fileName: string): void {
@@ -176,7 +176,7 @@ function download(blob: Blob, fileName: string): void {
 }
 
 async function saveStates(auto: boolean): Promise<void> {
-  if (saving) { return; } // previous save still running
+  if (saving || !sim) { return; } // previous save still running
   saving = true;
   try {
     const blob = buildBlob();
@@ -228,9 +228,10 @@ function stepOnce(): void {
   advance(1);
 }
 
-function restart(): void {
-  if (sim.states.snapshotCount > 0 && !confirm("Restart the simulation? Unsaved states will be lost.")) { return; }
-  sim = createSimulation();
+async function restart(): Promise<void> {
+  if (sim && sim.states.snapshotCount > 0 && !confirm("Restart the simulation? Unsaved states will be lost.")) { return; }
+  sim = null;
+  await startSimulation();
   saveHandle = null; // don't overwrite the previous run's file
   lastSaveInfo = "not saved yet";
 }
@@ -238,9 +239,9 @@ function restart(): void {
 pauseBtn.addEventListener("click", togglePause);
 $("step").addEventListener("click", stepOnce);
 $("save").addEventListener("click", () => void chooseFileAndSave());
-$("restart").addEventListener("click", restart);
+$("restart").addEventListener("click", () => void restart());
 window.addEventListener("keydown", (e) => {
-  if (e.target instanceof HTMLInputElement) { return; }
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) { return; }
   switch (e.key) {
     case " ": e.preventDefault(); togglePause(); break;
     case "n": case "N": stepOnce(); break;
@@ -248,7 +249,19 @@ window.addEventListener("keydown", (e) => {
   }
 });
 window.addEventListener("beforeunload", (e) => {
-  if (sim.states.snapshotCount > 0) { e.preventDefault(); }
+  if (sim && sim.states.snapshotCount > 0) { e.preventDefault(); }
 });
 
-requestAnimationFrame(frame);
+// For scripted use (headless browser, console)
+(window as any).biofilm = {
+  get sim() { return sim; },
+  get overlap() { return lastOverlap; },
+  get timing() { return { stepsPerSecond, framesPerSecond, stepMsPerFrame, drawMsPerFrame }; },
+  /** Download all snapshots as one JSON file (same as "Save states…" without the file picker). */
+  download: (fileName: string = STATES_FILE_NAME) => { if (sim) { download(buildBlob(), fileName); } },
+  pause: () => { if (!paused) { togglePause(); } },
+  resume: () => { if (paused) { togglePause(); } },
+  advance,
+};
+
+void startSimulation().then(() => requestAnimationFrame(frame));
