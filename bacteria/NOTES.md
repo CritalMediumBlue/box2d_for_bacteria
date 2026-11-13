@@ -98,6 +98,66 @@ minimal reproduction (worth reporting upstream).
   coefficients scaled by 0.8² (linear) and 0.8⁴ (angular) so each kick changes a cell's velocity
   by the same fraction as at the old size (mass ∝ area, inertia ∝ mass·length²).
 
-<!-- SOLVER -->
+## Rapier solver settings
 
-<!-- BODY -->
+Rapier's defaults (4 solver iterations, contact natural frequency 30 Hz) are made for games; here
+they let the packed colony compress well past the overlap target once the chamber is full. Each
+fix above was found by measuring overlaps, then the solver was tuned by sweeps (seed 7, overlap
+measured every snapshot; statistics from step 9000, when the chamber is nearly full, to 45 000):
+
+| Setting | Snapshots over target | Worst max | Worst p99 | Pairs over target / snapshot | Worst wall |
+|---|---|---|---|---|---|
+| 4 iterations, 30 Hz, **before** the contact fix (to step 21 900) | 30 / 44 | 63% | 23% | 263 | 50% |
+| 4 iterations, 30 Hz, contact fix only (to step 30 000) | 57 / 71 | 100% | 28% | 443 | 50% |
+| 8 iterations, 120 Hz | 86 / 121 | 94% | 5.2% | 8.7 | 50% |
+| 4 iterations, 240 Hz | 44 / 121 | 31% | 2.7% | 0.9 | 50% |
+| 8 iterations, 240 Hz | 1 / 121 | 20% | 1.3% | 0.0 | 50% |
+| 16 iterations, 240 Hz | 17 / 121 | 13% | 2.6% | 0.2 | 50% |
+| 2 substeps × 8 iterations, 240 Hz | 18 / 121 | 52% | 2.0% | 0.2 | 45% |
+| **8 iterations, 480 Hz (default)** | **0 / 121** | **4.0%** | **0.8%** | **0.0** | 27% |
+
+(The last six rows have all fixes, including `dragClamp` and `centredDivision`. Percentages are of
+the cell width; "wall" is the deepest penetration into a wall or wall triangle.)
+
+The failures in the stiffer settings are rare, local events in the dead-end top corners after
+~27 000 steps: one pair (or one cell against the wall) slowly pressed deeper over thousands of
+steps while the cells around it are packed and held by anchors. More iterations or substeps did
+not prevent them; stiffer contacts did. Multi-seed and longer checks of the default: see
+"Overlap results" below and `reports/overlap-report.md`.
+
+Contact stiffness can be changed per run (`--set rapierContactFrequency=…`,
+`rapierSolverIterations`, `rapierSubsteps`, `rapierPgsIterations`).
+
+## Rendering
+
+`render.ts` draws from the `Simulation` interface only (cell centre, angle, length, id, colour;
+anchors), so physics and drawing can change independently. Each cell is one segment stroked with
+round caps (a capsule), batched into a few paths per frame; the per-frame cell buffer is reused.
+
+- **Phase contrast** (default): grey medium, cells dark (four shades, by id) with a bright halo and
+  a slightly lighter core, PDMS walls lighter with bright/dark edge halos, the open channel below
+  the chamber, fixed camera grain and uneven illumination.
+- **Fluorescence**: cells glow in the region colours (wall zone green, centre magenta) on black.
+- **Diagnostic**: flat colours with true capsule outlines on top, anchors (black squares) and their
+  springs, and overlapping pairs highlighted: orange above 1% of the cell width, red above the 5%
+  target. Use it with `view=minX,minY,maxX,maxY` (or `biofilm.setView(...)`) to zoom in.
+
+Remaining per-frame allocations are the position objects Rapier's JS API returns for each cell
+(`body.translation()`; there is no bulk getter) and a few closures.
+
+## Determinism
+
+Same seed, same engine, same machine → identical output (checked: two Rapier runs, seed 7, first
+45 000 steps byte-identical overlap logs). Box2D and Rapier runs with the same seed start from the
+same initial cells but diverge after the first contacts. Cross-machine determinism of the
+WebAssembly build was not tested (`@dimforge/rapier2d-deterministic-compat` exists if needed).
+
+<!-- PERF -->
+
+<!-- OVERLAP -->
+
+<!-- ORG -->
+
+## Worth reviewing / not done
+
+<!-- REVIEW -->
