@@ -73,6 +73,7 @@ let stepsPerSecond = 0, framesPerSecond = 0, stepMsPerFrame = 0, drawMsPerFrame 
 const meter = new OverlapMeter();
 let lastOverlap: OverlapStats | null = null;
 const pairs = { i: new Int32Array(4096), j: new Int32Array(4096), depth: new Float64Array(4096), count: 0 };
+let pairsStep = -1; // step the pairs were measured at (re-measured only when the simulation moved)
 
 async function startSimulation(): Promise<void> {
   const seedText = seedInput.value.trim();
@@ -87,6 +88,7 @@ async function startSimulation(): Promise<void> {
     return;
   }
   lastOverlap = null;
+  pairsStep = -1;
   console.log(`Simulation started: ${sim.engine}, seed ${sim.params.seed}`);
 }
 
@@ -140,7 +142,8 @@ function render(): void {
   const style = styleSelect.value as RenderStyle;
   const radius = sim.params.radius;
   const targetDepth = OVERLAP_TARGET_FRACTION * 2 * radius;
-  if (style === "diagnostic") {
+  if (style === "diagnostic" && sim.stepCount !== pairsStep) {
+    pairsStep = sim.stepCount;
     pairs.count = 0;
     const visible = OVERLAP_VISIBLE_FRACTION * 2 * radius;
     meter.measure(sim, radius, targetDepth, (i, j, depth) => {
