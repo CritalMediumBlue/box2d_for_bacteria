@@ -24,7 +24,7 @@ export const DEFAULT_PARAMS = {
   rapierSubsteps: 1, // world.step() calls per simulation step, each 1 / (hertz * rapierSubsteps) long
   rapierSolverIterations: 12, // Rapier's default: 4
   rapierPgsIterations: 1, // Rapier's default
-  rapierContactFrequency: 480, // contact stiffness (natural frequency, Hz); 0 = Rapier's default (30)
+  rapierContactFrequency: 720, // contact stiffness (natural frequency, Hz); 0 = Rapier's default (30)
   rapierRefreshContacts: 1, // 1: replace a cell's collider when it grows, so Rapier recomputes its contacts (see rapier-simulation.ts)
 
   // --- chamber ---

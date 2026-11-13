@@ -160,4 +160,30 @@ WebAssembly build was not tested (`@dimforge/rapier2d-deterministic-compat` exis
 
 ## Worth reviewing / not done
 
-<!-- REVIEW -->
+1. **Rare overlap excursions remain.** With the defaults, a single pair occasionally exceeds the
+   target for one snapshot (about 1 snapshot in 700 in the multi-seed runs, up to ~6% of the
+   width). They are brief collisions at varying places, not a buildup. 16 iterations or stiffer
+   contacts may remove them at more cost (see "Overlap results"). The count for the long run is
+   in `reports/overlap-report.md`.
+2. **Wall penetration under sustained pressure.** Not part of the stated target (pairwise), but
+   measured: cells pressed into the walls and between the small wall triangles in the dead-end
+   top corners reach 0.1–0.25 (12–30% of the width), occasionally a full radius. Contacts there
+   carry the colony's accumulated pressure. Isolated tests show the contacts themselves work; it
+   is the solver's limit under that load. Options: more iterations, or a small contact skin on
+   the walls (`ColliderDesc.setContactSkin`; untested), or reviewing why the pressure builds (next
+   item).
+3. **Anchors barely hold cells (both engines; a modelling question).** Anchors are 0.8 Hz springs
+   (stiffness from the cell's mass), so once the chamber is full the colony drags anchored cells
+   far from their anchor points: spring stretch at step 24 000 (seed 7), median / 90th percentile
+   / max: Box2D 2.1 / 6.3 / 11.6 units, Rapier 1.4 / 3.8 / 8.3 (at step 12 000 both ~0.1). Stretched
+   springs pull these cells back against the flow, adding stress in the wall zones, where most
+   overlap excursions and the wall penetration happen. If anchors are meant to pin cells, a stiffer
+   spring, a maximum stretch (detach), or a fixed joint would match that better.
+4. **Rapier contact bug** (`tools/rapier-stale-contacts.mjs`): worth reporting to dimforge. If it
+   is fixed upstream, `rapierRefreshContacts=0` saves ~9% of the step time.
+5. **Drag model.** Drag is still the testbed's kick every 25 steps (now clamped). A continuous
+   damping would be smoother but changes the dynamics and needs recalibration.
+6. **Kept testbed quirks**: mass fixed at birth (counts the end caps twice); anchors created for a
+   cell that divides in the same step hold nothing; daughters inherit the parent's colour.
+7. **Box2D baseline is not overlap-free either**: its random start leaves ~90 pairs crossed through
+   each other for the whole run, and it never resolves them (see the overlap report).
