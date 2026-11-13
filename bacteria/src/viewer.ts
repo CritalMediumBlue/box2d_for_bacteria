@@ -68,7 +68,7 @@ let paused = false;
 let saveHandle: WritableFileHandle | null = null;
 let saving = false;
 let lastSaveInfo = "not saved yet";
-let rateSteps = 0, rateFrames = 0, rateTime = performance.now();
+let rateSteps = 0, rateFrames = 0, rateStepMs = 0, rateDrawMs = 0, rateTime = performance.now();
 let stepsPerSecond = 0, framesPerSecond = 0, stepMsPerFrame = 0, drawMsPerFrame = 0;
 const meter = new OverlapMeter();
 let lastOverlap: OverlapStats | null = null;
@@ -113,14 +113,15 @@ function frame(): void {
   const t1 = performance.now();
   render();
   const t2 = performance.now();
-  stepMsPerFrame = 0.9 * stepMsPerFrame + 0.1 * (t1 - t0);
-  drawMsPerFrame = 0.9 * drawMsPerFrame + 0.1 * (t2 - t1);
+  rateStepMs += t1 - t0;
+  rateDrawMs += t2 - t1;
   rateFrames++;
-  if (t2 - rateTime >= 1000) {
+  if (t2 - rateTime >= 1000) { // averages over the last second
     stepsPerSecond = (rateSteps * 1000) / (t2 - rateTime);
     framesPerSecond = (rateFrames * 1000) / (t2 - rateTime);
-    rateSteps = 0;
-    rateFrames = 0;
+    stepMsPerFrame = rateStepMs / rateFrames;
+    drawMsPerFrame = rateDrawMs / rateFrames;
+    rateSteps = rateFrames = rateStepMs = rateDrawMs = 0;
     rateTime = t2;
   }
   requestAnimationFrame(frame);
