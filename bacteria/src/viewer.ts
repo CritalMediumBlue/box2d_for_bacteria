@@ -97,7 +97,15 @@ async function startSimulation(): Promise<void> {
 function advance(steps: number): void {
   if (!sim) { return; }
   for (let i = 0; i < steps; i++) {
-    const snapshotTaken = sim.step();
+    let snapshotTaken: boolean;
+    try {
+      snapshotTaken = sim.step();
+    } catch (e) {
+      console.error(`The simulation failed at step ${sim.stepCount + 1}:`, e);
+      if (!paused) { togglePause(); }
+      lastSaveInfo = `SIMULATION FAILED at step ${sim.stepCount + 1} (see console); save with J to keep the snapshots`;
+      return;
+    }
     rateSteps++;
     if (snapshotTaken) {
       lastOverlap = meter.measure(sim, sim.params.radius, OVERLAP_TARGET_FRACTION * 2 * sim.params.radius);

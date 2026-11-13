@@ -30,6 +30,8 @@ interface Cell {
   collider: Collider;
   /** sqrt of the cell's friction coefficient (see createCell). */
   sqrtFriction: number;
+  /** Whether the collider is currently turned by π on its body (see resizeCollider). */
+  flipped: boolean;
   /** Mass and rotational inertia, fixed at birth. */
   mass: number;
   inertia: number;
@@ -249,7 +251,7 @@ export class RapierSimulation implements Simulation {
     const id = this.nextId++;
     this.states.addLineage(id, parentId);
     return {
-      id, body, collider, sqrtFriction, mass, inertia, length, color, reproductiveLength,
+      id, body, collider, sqrtFriction, flipped: false, mass, inertia, length, color, reproductiveLength,
       growthRate: 1 + p.rate, anchors: [], removed: false,
     };
   }
@@ -268,19 +270,23 @@ export class RapierSimulation implements Simulation {
   /**
    * Give the cell's collider its current length.
    *
-   * Rapier (0.21) keeps a contact's points from step to step as long as the two bodies hardly move
-   * relative to each other, and does not recompute them when a collider's shape changes
+   * Rapier (0.21) keeps a contact's points from step to step as long as the two colliders hardly
+   * move relative to each other, and does not recompute them when a collider's shape changes
    * (setHalfHeight / setShape). A cell at rest, e.g. in a packed colony, then grows straight into
-   * its neighbours and the walls with the contact still reporting zero depth. Replacing the
-   * collider forces fresh contacts. rapierRefreshContacts = 0 resizes in place instead (to show the
-   * effect; see NOTES.md).
+   * its neighbours and the walls with the contact still reporting zero depth.
+   *
+   * Fix (rapierRefreshContacts = 1): after resizing, turn the collider by π on its body. A capsule
+   * is symmetric, so the shape in the world is unchanged (and the body's angle is untouched), but
+   * every cached contact point moves to the opposite side of the collider's frame, so Rapier
+   * computes all of its contacts afresh. (Replacing the collider also works, but leaks WebAssembly
+   * memory in Rapier 0.21 until the heap is exhausted after ~230 000 steps.)
+   * rapierRefreshContacts = 0 resizes only (to show the effect; see NOTES.md).
    */
   private resizeCollider(cell: Cell): void {
+    cell.collider.setHalfHeight(cell.length / 2);
     if (this.params.rapierRefreshContacts) {
-      this.world.removeCollider(cell.collider, false);
-      cell.collider = this.world.createCollider(this.cellColliderDesc(cell.length, cell.sqrtFriction), cell.body);
-    } else {
-      cell.collider.setHalfHeight(cell.length / 2);
+      cell.flipped = !cell.flipped;
+      cell.collider.setRotationWrtParent(cell.flipped ? Math.PI : 0);
     }
   }
 
@@ -300,8 +306,8 @@ export class RapierSimulation implements Simulation {
     cell.inertia = inertia;
     cell.length = length;
     cell.sqrtFriction = Math.sqrt(friction);
-    this.world.removeCollider(cell.collider, false); // new shape and friction, fresh contacts
-    cell.collider = this.world.createCollider(this.cellColliderDesc(length, cell.sqrtFriction), body);
+    cell.collider.setFriction(cell.sqrtFriction);
+    this.resizeCollider(cell); // new length, fresh contacts
     cell.color = color;
     cell.growthRate = 1 + p.rate;
     cell.id = this.nextId++;

@@ -1,8 +1,10 @@
 // Minimal reproduction: in @dimforge/rapier2d-compat 0.21.0, growing a collider at rest
 // (setHalfHeight / setShape) does not update its existing contacts. A capsule whose tip grows into
 // a fixed box is never pushed out: the contact keeps reporting zero depth. Replacing the collider
-// (remove + create) gives correct contacts. This is why rapier-simulation.ts replaces each cell's
-// collider when it grows (rapierRefreshContacts).
+// (remove + create) gives correct contacts, but leaks WebAssembly memory (~13 MB per 1000 steps
+// with 1700 cells replaced every 25 steps; the 4 GB heap ran out after ~230 000 steps). Turning
+// the resized collider by π on its body (same shape for a capsule) also gives correct contacts,
+// without allocating: that is what rapier-simulation.ts does (rapierRefreshContacts).
 //
 // usage (from the repository root): node bacteria/tools/rapier-stale-contacts.mjs
 import RAPIER from "@dimforge/rapier2d-compat";
@@ -35,5 +37,8 @@ function trial(label, grow) {
 trial("setHalfHeight", (w, b, c, d, h) => { c.setHalfHeight(h); return c; });
 trial("setShape(new Capsule)", (w, b, c, d, h) => { c.setShape(new RAPIER.Capsule(h, 0.4)); return c; });
 trial("remove + create collider", (w, b, c, d, h) => { w.removeCollider(c, false); return w.createCollider(d(h), b); });
-// Expected: penetration ~0 in all three cases (the capsule is pushed down as it grows).
-// Observed with 0.21.0: 0.900 for setHalfHeight and setShape (capsule never moves), 0.000 for remove + create.
+let flipped = false;
+trial("setHalfHeight + turn collider by pi", (w, b, c, d, h) => { c.setHalfHeight(h); flipped = !flipped; c.setRotationWrtParent(flipped ? Math.PI : 0); return c; });
+// Expected: penetration ~0 in all cases (the capsule is pushed down as it grows).
+// Observed with 0.21.0: 0.900 for setHalfHeight and setShape (capsule never moves), 0.000 for
+// remove + create and for the turn by pi.

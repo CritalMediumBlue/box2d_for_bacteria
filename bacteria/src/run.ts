@@ -170,7 +170,18 @@ async function main(): Promise<void> {
   let savedAtSnapshot = -1;
   for (let i = 0; i < opts.steps && !interrupted; i++) {
     const t0 = performance.now();
-    const snapshotTaken = sim.step();
+    let snapshotTaken: boolean;
+    try {
+      snapshotTaken = sim.step();
+    } catch (e) {
+      // The physics engine failed (e.g. a WebAssembly trap): keep what was recorded so far
+      console.error(`ERROR: the simulation failed at step ${sim.stepCount + 1}:`, e);
+      console.error(`saving the ${sim.states.snapshotCount} snapshots recorded so far...`);
+      save(sim, out);
+      if (overlapFd !== null) { fs.closeSync(overlapFd); }
+      if (timingFd !== null) { fs.closeSync(timingFd); }
+      process.exit(4);
+    }
     stepMs += performance.now() - t0;
     stepsTimed++;
     if (snapshotTaken && timingFd !== null) {
