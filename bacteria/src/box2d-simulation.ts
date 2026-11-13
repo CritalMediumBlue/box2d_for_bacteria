@@ -7,8 +7,8 @@
 
 import * as b2 from "../../build/esm/index.js";
 import {
-  CHAMBER, COLOR_CENTRE, COLOR_INITIAL, COLOR_WALL, DEFAULT_PARAMS, Point, RGB, Simulation, SimulationParams,
-  checkParams, orientationOf,
+  CHAMBER, COLOR_CENTRE, COLOR_INITIAL, COLOR_WALL, DEFAULT_PARAMS, DRAG_APPLICATIONS_PER_CELL, Point, RGB, Simulation,
+  SimulationParams, checkParams, dragFraction, orientationOf,
 } from "./model.js";
 import { Rng, mulberry32, randomSeed } from "./rng.js";
 import { CellState, StateRecorder } from "./states.js";
@@ -148,8 +148,19 @@ export class Box2DSimulation implements Simulation {
           (shape as b2.CircleShape).m_p.y *= body.growthRate;
         }
         const velocity = body.GetLinearVelocity();
-        body.ApplyForce(new b2.Vec2(-p.airResistance * velocity.x, -p.airResistance * velocity.y), body.GetWorldCenter(), true);
-        body.ApplyTorque(-p.angularAirResistance * body.GetAngularVelocity(), true);
+        const dt = 1 / p.hertz;
+        if (p.dragClamp && dragFraction(p.airResistance, body.GetMass(), dt, false) > 1) {
+          // Stop the cell instead of reversing it (see dragClamp): each of the 3 forces removes a third
+          const k = body.GetMass() / (DRAG_APPLICATIONS_PER_CELL * dt);
+          body.ApplyForce(new b2.Vec2(-k * velocity.x, -k * velocity.y), body.GetWorldCenter(), true);
+        } else {
+          body.ApplyForce(new b2.Vec2(-p.airResistance * velocity.x, -p.airResistance * velocity.y), body.GetWorldCenter(), true);
+        }
+        if (p.dragClamp && dragFraction(p.angularAirResistance, body.GetInertia(), dt, false) > 1) {
+          body.ApplyTorque(-body.GetInertia() / (DRAG_APPLICATIONS_PER_CELL * dt) * body.GetAngularVelocity(), true);
+        } else {
+          body.ApplyTorque(-p.angularAirResistance * body.GetAngularVelocity(), true);
+        }
       }
 
       const [c1, c2] = capCentres(body);

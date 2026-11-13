@@ -10,8 +10,8 @@
 import RAPIER from "@dimforge/rapier2d-compat";
 import type { Collider, ColliderDesc, ImpulseJoint, RigidBody, World } from "@dimforge/rapier2d-compat";
 import {
-  CHAMBER, COLOR_CENTRE, COLOR_INITIAL, COLOR_WALL, DEFAULT_PARAMS, DRAG_APPLICATIONS_PER_CELL, Point, RGB,
-  Simulation, SimulationParams, cellMassProperties, checkParams, orientationOf,
+  CHAMBER, COLOR_CENTRE, COLOR_INITIAL, COLOR_WALL, DEFAULT_PARAMS, Point, RGB,
+  Simulation, SimulationParams, cellMassProperties, checkParams, dragFraction, orientationOf,
 } from "./model.js";
 import { Rng, mulberry32, randomSeed } from "./rng.js";
 import { CellState, StateRecorder } from "./states.js";
@@ -30,6 +30,9 @@ interface Cell {
   collider: Collider;
   /** sqrt of the cell's friction coefficient (see createCell). */
   sqrtFriction: number;
+  /** Mass and rotational inertia, fixed at birth. */
+  mass: number;
+  inertia: number;
   /** Distance between the end-cap centres (the exported `le`). */
   length: number;
   growthRate: number;
@@ -165,9 +168,9 @@ export class RapierSimulation implements Simulation {
       // Drag. Box2D applied the force once per fixture (3x), and it acted during the next step;
       // the same velocity change as an impulse now.
       const v = body.linvel();
-      const linear = -DRAG_APPLICATIONS_PER_CELL * p.airResistance * dt;
+      const linear = -dragFraction(p.airResistance, cell.mass, dt, p.dragClamp !== 0) * cell.mass;
       body.applyImpulse({ x: linear * v.x, y: linear * v.y }, true);
-      body.applyTorqueImpulse(-DRAG_APPLICATIONS_PER_CELL * p.angularAirResistance * dt * body.angvel(), true);
+      body.applyTorqueImpulse(-dragFraction(p.angularAirResistance, cell.inertia, dt, p.dragClamp !== 0) * cell.inertia * body.angvel(), true);
 
       const length = cell.length;
       const position = body.translation();
@@ -246,7 +249,7 @@ export class RapierSimulation implements Simulation {
     const id = this.nextId++;
     this.states.addLineage(id, parentId);
     return {
-      id, body, collider, sqrtFriction, length, color, reproductiveLength,
+      id, body, collider, sqrtFriction, mass, inertia, length, color, reproductiveLength,
       growthRate: 1 + p.rate, anchors: [], removed: false,
     };
   }
@@ -293,6 +296,8 @@ export class RapierSimulation implements Simulation {
     body.setLinvel(this.zero, true);
     body.setAngvel(0, true);
     body.setAdditionalMassProperties(mass, this.zero, inertia, true);
+    cell.mass = mass;
+    cell.inertia = inertia;
     cell.length = length;
     cell.sqrtFriction = Math.sqrt(friction);
     this.world.removeCollider(cell.collider, false); // new shape and friction, fresh contacts

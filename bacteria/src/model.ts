@@ -56,6 +56,11 @@ export const DEFAULT_PARAMS = {
   // Unscaled, the kick over-corrects (reverses) a small cell's velocity and spin. Testbed value: 0.007.
   airResistance: 0.007 * 0.8 ** 2,
   angularAirResistance: 0.007 * 0.8 ** 4,
+  // 1: a drag kick removes at most all of a cell's velocity / spin (it can stop a cell, never reverse
+  // it). 0: the original kick, which for cells shorter than ~1.4 reverses the spin and multiplies
+  // it by up to ~1.4 every growth step, so small cells without neighbours spin up until the physics
+  // engine's speed limit and hit their neighbours like propellers (see NOTES.md).
+  dragClamp: 1,
 
   // --- surface attachment near the walls ---
   anchorProbability: 0.0025, // per cell per growth event, when near a wall
@@ -137,6 +142,16 @@ export const COLOR_CENTRE: RGB = { r: 0.8, g: 0.1, b: 0.6 };
  * applies drag once per fixture, i.e. three times per growth step.
  */
 export const DRAG_APPLICATIONS_PER_CELL = 3;
+
+/**
+ * Fraction of a cell's velocity (or spin) removed by one drag kick: the testbed's force
+ * (coefficient · velocity, once per fixture) acting for one time step, divided by the mass (or
+ * rotational inertia). With `clamp` it is at most 1 (see dragClamp).
+ */
+export function dragFraction(coefficient: number, massOrInertia: number, dt: number, clamp: boolean): number {
+  const fraction = DRAG_APPLICATIONS_PER_CELL * coefficient * dt / massOrInertia;
+  return clamp && fraction > 1 ? 1 : fraction;
+}
 
 /**
  * Mass and rotational inertia of a newly created cell, exactly as Box2D computes them for the
