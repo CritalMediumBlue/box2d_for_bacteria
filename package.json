@@ -30,7 +30,11 @@
     "watch-testbed": "tsc -p testbed --watch",
     "start-testbed": "http-server -c-1 -o testbed/index.html",
     "dist-testbed": "(cd testbed && rollup -c)",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build-bacteria": "npm run build-box2d-module && tsc -p bacteria",
+    "watch-bacteria": "tsc -p bacteria --watch",
+    "start-bacteria": "http-server -c-1 -o bacteria/index.html",
+    "run-bacteria": "node bacteria/build/run.js"
   },
   "repository": {
     "type": "git",
@@ -46,6 +50,7 @@
     "@types/systemjs": "^6.1.0"
   },
   "devDependencies": {
+    "@types/node": "^22.20.5",
     "http-server": "^14.0.0",
     "rollup": "^3.25.3",
     "rollup-plugin-typescript2": "^0.23.0",

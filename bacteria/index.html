@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Microfluidic Biofilm</title>
+  <style>
+    body { margin: 0; font: 14px system-ui, sans-serif; background: #fff; color: #222; display: flex; flex-direction: column; height: 100vh; }
+    header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 8px 12px; border-bottom: 1px solid #ddd; }
+    header h1 { font-size: 16px; margin: 0 8px 0 0; }
+    button { font: inherit; padding: 3px 10px; }
+    input[type=number] { width: 6em; font: inherit; }
+    #status { font-variant-numeric: tabular-nums; color: #555; }
+    #canvas { flex: 1; width: 100%; min-height: 0; display: block; }
+    kbd { border: 1px solid #ccc; border-radius: 3px; padding: 0 4px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Microfluidic Biofilm</h1>
+    <button id="pause" title="Space">Pause</button>
+    <button id="step" title="N">Step</button>
+    <button id="save" title="J">Save states…</button>
+    <label>Steps/frame <input id="speed" type="number" min="1" max="100" value="1"></label>
+    <label>Seed <input id="seed" type="number" min="0" placeholder="random"></label>
+    <button id="restart" title="Restart with this seed (blank = random); unsaved states are lost">Restart</button>
+    <span id="status"></span>
+    <span style="color:#888"><kbd>Space</kbd> pause · <kbd>N</kbd> step · <kbd>J</kbd> save</span>
+  </header>
+  <canvas id="canvas"></canvas>
+  <script type="module" src="./build/viewer.js"></script>
+</body>
+</html>
