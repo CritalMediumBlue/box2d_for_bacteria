@@ -24,6 +24,7 @@ export const DEFAULT_PARAMS = {
   rapierSolverIterations: 4, // Rapier's default
   rapierPgsIterations: 1, // Rapier's default
   rapierContactFrequency: 0, // contact stiffness (natural frequency, Hz); 0 = Rapier's default (30)
+  rapierRefreshContacts: 1, // 1: replace a cell's collider when it grows, so Rapier recomputes its contacts (see rapier-simulation.ts)
 
   // --- chamber ---
   minX: -50, maxX: 50, // cells leaving this range are removed
@@ -43,6 +44,10 @@ export const DEFAULT_PARAMS = {
   reproductionProportionRange: 0.2,
   reproductiveLengthMean: 4.8, // division length = mean + (U(0,1) - 0.5) * spread
   reproductiveLengthSpread: 2.0,
+  // 1: the two daughters exactly fill the parent's outline. 0: the testbed's placement, which shifts
+  // both daughters along the axis by radius * (proportion - 1/2), so one daughter's tip pokes up to
+  // 0.2 * radius (10% of the cell width) past the parent's end, into any neighbour touching it there.
+  centredDivision: 1,
   randomDeathProbability: 0.001 * 0.15, // per cell per growth event
 
   // --- drag (applied on growth steps only, once per Box2D fixture, as in the original test) ---

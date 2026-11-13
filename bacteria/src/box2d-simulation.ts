@@ -161,10 +161,11 @@ export class Box2DSimulation implements Simulation {
       if (length >= body.reproductiveLength) {
         const a = p.radius;
         const proportion = p.reproductionProportionMin + this.rng() * p.reproductionProportionRange;
-        const factorA = proportion * (1 / 2) * length + (a / 2);
-        const factorB = (1 - proportion) * (1 / 2) * length + (a / 2);
         const lengthA = (length - (2 * a)) * proportion;
         const lengthB = (length - (2 * a)) * (1 - proportion);
+        // Distances of the daughters' centres from the parent's (see centredDivision in model.ts)
+        const factorA = p.centredDivision ? length / 2 - lengthB / 2 : proportion * (1 / 2) * length + (a / 2);
+        const factorB = p.centredDivision ? length / 2 - lengthA / 2 : (1 - proportion) * (1 / 2) * length + (a / 2);
         const offsetA = new b2.Vec2(-factorA * Math.sin(angle), factorA * Math.cos(angle));
         const offsetB = new b2.Vec2(-factorB * Math.sin(angle), factorB * Math.cos(angle));
         const position1 = new b2.Vec2(position.x - offsetB.x, position.y - offsetB.y);

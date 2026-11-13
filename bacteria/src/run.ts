@@ -10,7 +10,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { DEFAULT_ENGINE, createSimulation, isEngine } from "./engines.js";
 import { DEFAULT_PARAMS, ENGINES, Engine, Simulation, SimulationParams } from "./model.js";
-import { OVERLAP_CSV_HEADER, OverlapMeter, OverlapStats, overlapCsvRow } from "./overlap.js";
+import {
+  OVERLAP_CSV_HEADER, OVERLAP_TARGET_FRACTION, OVERLAP_WARMUP_STEPS, OverlapMeter, OverlapStats, overlapCsvRow,
+} from "./overlap.js";
 
 const USAGE = `Usage: node bacteria/build/run.js --steps N [options]
 
@@ -27,8 +29,8 @@ Options:
 Overlap check (cell-cell penetration depth, measured at every snapshot):
   --overlap-log FILE         write one CSV row per snapshot (max/mean/p99 depth, ...)
   --overlap-warmup N         steps to let the random initial placement relax before the
-                             target applies (default: 3000)
-  --overlap-target F         target: max depth < F * cell width (default: 0.05)
+                             target applies (default: ${OVERLAP_WARMUP_STEPS})
+  --overlap-target F         target: max depth < F * cell width (default: ${OVERLAP_TARGET_FRACTION})
   --overlap-check            exit with status 3 if the target is missed after the warm-up
 
 The file is rewritten in full at each save, so it is always a complete, valid JSON file.
@@ -43,7 +45,8 @@ function parseArgs(argv: string[]) {
   const opts = {
     steps: NaN, out: "states.json", saveEvery: 500, engine: DEFAULT_ENGINE as Engine,
     overrides: {} as Partial<SimulationParams>,
-    overlapLog: null as string | null, overlapWarmup: 3000, overlapTarget: 0.05, overlapCheck: false,
+    overlapLog: null as string | null, overlapWarmup: OVERLAP_WARMUP_STEPS, overlapTarget: OVERLAP_TARGET_FRACTION,
+    overlapCheck: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];

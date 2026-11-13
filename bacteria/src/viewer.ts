@@ -14,13 +14,11 @@
 
 import { DEFAULT_ENGINE, createSimulation, isEngine } from "./engines.js";
 import { DEFAULT_PARAMS, Engine, Simulation, SimulationParams } from "./model.js";
-import { OverlapMeter, OverlapStats } from "./overlap.js";
+import { OVERLAP_TARGET_FRACTION, OVERLAP_WARMUP_STEPS, OverlapMeter, OverlapStats } from "./overlap.js";
 import { ChamberRenderer, RENDER_STYLES, RenderStyle } from "./render.js";
 
 const AUTO_SAVE_EVERY_SNAPSHOTS = 500;
 const STATES_FILE_NAME = "states.json";
-/** Overlap target used for the readout: max depth < 5% of the cell width. */
-const OVERLAP_TARGET_FRACTION = 0.05;
 
 /** Minimal typing for the File System Access API (Chrome/Edge). */
 interface WritableFileHandle {
@@ -152,8 +150,10 @@ function render(): void {
   if (lastOverlap) {
     const width = 2 * radius;
     const max = lastOverlap.maxDepth / width * 100, mean = lastOverlap.meanDepth / width * 100;
-    overlapEl.textContent = `overlap at step ${lastOverlap.step}: max ${max.toFixed(1)}% · mean ${mean.toFixed(2)}% of cell width`;
-    overlapEl.className = max < OVERLAP_TARGET_FRACTION * 100 ? "ok" : "bad";
+    const warmup = lastOverlap.step < OVERLAP_WARMUP_STEPS;
+    overlapEl.textContent = `overlap at step ${lastOverlap.step}: max ${max.toFixed(1)}% · mean ${mean.toFixed(2)}% of cell width` +
+      (warmup ? ` (warm-up: random initial placement relaxing until step ${OVERLAP_WARMUP_STEPS})` : ` (target < ${OVERLAP_TARGET_FRACTION * 100}%)`);
+    overlapEl.className = warmup ? "" : max < OVERLAP_TARGET_FRACTION * 100 ? "ok" : "bad";
   } else {
     overlapEl.textContent = "overlap: measured at each snapshot";
     overlapEl.className = "";

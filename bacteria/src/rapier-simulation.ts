@@ -28,6 +28,8 @@ interface Cell {
   id: number;
   body: RigidBody;
   collider: Collider;
+  /** sqrt of the cell's friction coefficient (see createCell). */
+  sqrtFriction: number;
   /** Distance between the end-cap centres (the exported `le`). */
   length: number;
   growthRate: number;
@@ -158,7 +160,7 @@ export class RapierSimulation implements Simulation {
 
       // Grow along the long axis
       cell.length *= cell.growthRate;
-      cell.collider.setHalfHeight(cell.length / 2);
+      this.resizeCollider(cell);
 
       // Drag. Box2D applied the force once per fixture (3x), and it acted during the next step;
       // the same velocity change as an impulse now.
@@ -176,10 +178,11 @@ export class RapierSimulation implements Simulation {
       if (length >= cell.reproductiveLength) {
         const a = p.radius;
         const proportion = p.reproductionProportionMin + this.rng() * p.reproductionProportionRange;
-        const factorA = proportion * (1 / 2) * length + (a / 2);
-        const factorB = (1 - proportion) * (1 / 2) * length + (a / 2);
         const lengthA = (length - (2 * a)) * proportion;
         const lengthB = (length - (2 * a)) * (1 - proportion);
+        // Distances of the daughters' centres from the parent's (see centredDivision in model.ts)
+        const factorA = p.centredDivision ? length / 2 - lengthB / 2 : proportion * (1 / 2) * length + (a / 2);
+        const factorB = p.centredDivision ? length / 2 - lengthA / 2 : (1 - proportion) * (1 / 2) * length + (a / 2);
         const sin = Math.sin(angle), cos = Math.cos(angle);
         const x1 = position.x + factorB * sin, y1 = position.y - factorB * cos;
         const x2 = position.x - factorA * sin, y2 = position.y + factorA * cos;
@@ -237,20 +240,45 @@ export class RapierSimulation implements Simulation {
       .setRotation(angle)
       .setCanSleep(false)
       .setAdditionalMassProperties(mass, this.zero, inertia));
-    // Mass comes from the body (fixed at birth, as in Box2D), so the collider has no density
-    const collider = this.world.createCollider(RAPIER.ColliderDesc.capsule(length / 2, p.radius)
-      .setDensity(0)
-      // Box2D mixes frictions as sqrt(f1 * f2): store sqrt(f) and multiply
-      .setFriction(Math.sqrt(friction))
-      .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Multiply)
-      .setRestitution(p.restitution)
-      .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Max), body);
+    // Box2D mixes frictions as sqrt(f1 * f2): store sqrt(f) and multiply
+    const sqrtFriction = Math.sqrt(friction);
+    const collider = this.world.createCollider(this.cellColliderDesc(length, sqrtFriction), body);
     const id = this.nextId++;
     this.states.addLineage(id, parentId);
     return {
-      id, body, collider, length, color, reproductiveLength,
+      id, body, collider, sqrtFriction, length, color, reproductiveLength,
       growthRate: 1 + p.rate, anchors: [], removed: false,
     };
+  }
+
+  private cellColliderDesc(length: number, sqrtFriction: number): ColliderDesc {
+    const p = this.params;
+    // Mass comes from the body (fixed at birth, as in Box2D), so the collider has no density
+    return RAPIER.ColliderDesc.capsule(length / 2, p.radius)
+      .setDensity(0)
+      .setFriction(sqrtFriction)
+      .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Multiply)
+      .setRestitution(p.restitution)
+      .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Max);
+  }
+
+  /**
+   * Give the cell's collider its current length.
+   *
+   * Rapier (0.21) keeps a contact's points from step to step as long as the two bodies hardly move
+   * relative to each other, and does not recompute them when a collider's shape changes
+   * (setHalfHeight / setShape). A cell at rest, e.g. in a packed colony, then grows straight into
+   * its neighbours and the walls with the contact still reporting zero depth. Replacing the
+   * collider forces fresh contacts. rapierRefreshContacts = 0 resizes in place instead (to show the
+   * effect; see NOTES.md).
+   */
+  private resizeCollider(cell: Cell): void {
+    if (this.params.rapierRefreshContacts) {
+      this.world.removeCollider(cell.collider, false);
+      cell.collider = this.world.createCollider(this.cellColliderDesc(cell.length, cell.sqrtFriction), cell.body);
+    } else {
+      cell.collider.setHalfHeight(cell.length / 2);
+    }
   }
 
   /** Turn an existing cell (a dividing parent) into a newborn one: same as createCell, reusing the body. */
@@ -265,9 +293,10 @@ export class RapierSimulation implements Simulation {
     body.setLinvel(this.zero, true);
     body.setAngvel(0, true);
     body.setAdditionalMassProperties(mass, this.zero, inertia, true);
-    cell.collider.setHalfHeight(length / 2);
-    cell.collider.setFriction(Math.sqrt(friction));
     cell.length = length;
+    cell.sqrtFriction = Math.sqrt(friction);
+    this.world.removeCollider(cell.collider, false); // new shape and friction, fresh contacts
+    cell.collider = this.world.createCollider(this.cellColliderDesc(length, cell.sqrtFriction), body);
     cell.color = color;
     cell.growthRate = 1 + p.rate;
     cell.id = this.nextId++;
@@ -323,7 +352,10 @@ export class RapierSimulation implements Simulation {
     }
     for (const tri of CHAMBER.triangles) {
       const [a, b, c] = tri.vertices.map((v) => ({ x: v.x + tri.offset.x, y: v.y + tri.offset.y }));
-      add(RAPIER.ColliderDesc.triangle(a, b, c));
+      // Rapier needs counter-clockwise triangles: a clockwise one lets cells pass through it (the
+      // left- and top-wall triangles are listed clockwise; Box2D reorders them itself)
+      const clockwise = (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y) < 0;
+      add(clockwise ? RAPIER.ColliderDesc.triangle(a, c, b) : RAPIER.ColliderDesc.triangle(a, b, c));
     }
   }
 }

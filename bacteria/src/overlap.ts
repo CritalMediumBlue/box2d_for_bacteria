@@ -11,6 +11,11 @@
 
 import { CHAMBER, Simulation } from "./model.js";
 
+/** Target: max cell–cell penetration below this fraction of the cell width. */
+export const OVERLAP_TARGET_FRACTION = 0.05;
+/** Steps to let the random initial placement (heavily overlapping) relax before the target applies. */
+export const OVERLAP_WARMUP_STEPS = 3000;
+
 export interface OverlapStats {
   step: number;
   cells: number;
@@ -24,7 +29,7 @@ export interface OverlapStats {
   p99Depth: number;
   /** Pairs deeper than the target. */
   pairsOverTarget: number;
-  /** Deepest penetration of a cell into the side or top walls. */
+  /** Deepest penetration of a cell into the side or top walls or their triangles. */
   maxWallDepth: number;
   /** Where the deepest cell–cell overlap is (midpoint of the two centres) and the deepest wall contact (cell centre). */
   maxAt: { x: number, y: number };
@@ -156,11 +161,15 @@ export class OverlapMeter {
       }
     }
 
-    // Walls: side and top edges (the small triangles are not checked)
+    // Walls: side and top edges, and the small triangles along them. Only cells close enough to
+    // reach a wall are tested. A cell axis crossing a wall counts as depth = radius.
     let maxWallDepth = 0;
-    for (const [w1, w2] of CHAMBER.edges) {
-      for (let i = 0; i < n; i++) {
-        const d2 = segmentDistanceSquared(ax[i], ay[i], bx[i], by[i], w1.x, w1.y, w2.x, w2.y);
+    const reach = maxLength / 2 + radius + 1.5; // triangles stick 1 unit into the chamber
+    const segments = wallSegments();
+    for (let i = 0; i < n; i++) {
+      if (cx[i] > -50 + reach && cx[i] < 50 - reach && cy[i] < 200 - reach) { continue; }
+      for (let w = 0; w < segments.length; w += 4) {
+        const d2 = segmentDistanceSquared(ax[i], ay[i], bx[i], by[i], segments[w], segments[w + 1], segments[w + 2], segments[w + 3]);
         if (d2 < radius * radius) {
           const depth = radius - Math.sqrt(d2);
           if (depth > maxWallDepth) { maxWallDepth = depth; maxWallAt.x = cx[i]; maxWallAt.y = cy[i]; }
@@ -184,6 +193,23 @@ export class OverlapMeter {
     this.cx = new Float64Array(m); this.cy = new Float64Array(m);
     this.binOf = new Int32Array(m); this.order = new Int32Array(m);
   }
+}
+
+let wallSegmentCache: Float64Array | null = null;
+
+/** Chamber edges and triangle sides as a flat list of segments (x1, y1, x2, y2, ...). */
+function wallSegments(): Float64Array {
+  if (wallSegmentCache) { return wallSegmentCache; }
+  const list: number[] = [];
+  for (const [a, b] of CHAMBER.edges) { list.push(a.x, a.y, b.x, b.y); }
+  for (const t of CHAMBER.triangles) {
+    for (let k = 0; k < 3; k++) {
+      const a = t.vertices[k], b = t.vertices[(k + 1) % 3];
+      list.push(a.x + t.offset.x, a.y + t.offset.y, b.x + t.offset.x, b.y + t.offset.y);
+    }
+  }
+  wallSegmentCache = Float64Array.from(list);
+  return wallSegmentCache;
 }
 
 function percentile(values: Float64Array, q: number): number {
