@@ -19,11 +19,12 @@ export const DEFAULT_PARAMS = {
   velocityIterations: 20,
   positionIterations: 20,
   particleIterations: 10,
-  // Rapier only
+  // Rapier only. Defaults chosen by sweeping for the overlap target (NOTES.md): Rapier's own defaults
+  // (4 iterations, 30 Hz) let a packed colony compress far beyond it.
   rapierSubsteps: 1, // world.step() calls per simulation step, each 1 / (hertz * rapierSubsteps) long
-  rapierSolverIterations: 4, // Rapier's default
+  rapierSolverIterations: 8, // Rapier's default: 4
   rapierPgsIterations: 1, // Rapier's default
-  rapierContactFrequency: 0, // contact stiffness (natural frequency, Hz); 0 = Rapier's default (30)
+  rapierContactFrequency: 480, // contact stiffness (natural frequency, Hz); 0 = Rapier's default (30)
   rapierRefreshContacts: 1, // 1: replace a cell's collider when it grows, so Rapier recomputes its contacts (see rapier-simulation.ts)
 
   // --- chamber ---
