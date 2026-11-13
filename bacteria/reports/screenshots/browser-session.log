@@ -1,0 +1,14 @@
+step 6200 cells 1029 overlap(step 6000) max 2.13% at (-29.7,196.5) mean 0.213% wall 0.44% | 136 steps/s, 1 fps, elapsed 30s
+step 12400 cells 1754 overlap(step 12300) max 1.56% at (-12.2,188.5) mean 0.162% wall 0.56% | 86 steps/s, 0 fps, elapsed 86s
+step 18400 cells 1619 overlap(step 18300) max 0.90% at (-39.0,183.2) mean 0.183% wall 3.53% | 73 steps/s, 0 fps, elapsed 192s
+step 24400 cells 1729 overlap(step 24300) max 0.91% at (18.6,196.7) mean 0.177% wall 10.25% | 42 steps/s, 0 fps, elapsed 316s
+step 30400 cells 1745 overlap(step 30300) max 0.84% at (37.9,157.9) mean 0.184% wall 9.53% | 74 steps/s, 0 fps, elapsed 415s
+step 36400 cells 1707 overlap(step 36300) max 0.91% at (38.3,152.5) mean 0.187% wall 24.23% | 75 steps/s, 0 fps, elapsed 502s
+step 42400 cells 1753 overlap(step 42300) max 1.33% at (-8.7,140.8) mean 0.183% wall 13.64% | 73 steps/s, 0 fps, elapsed 589s
+step 48400 cells 1725 overlap(step 48300) max 0.97% at (-39.9,184.8) mean 0.183% wall 18.51% | 73 steps/s, 0 fps, elapsed 677s
+step 54400 cells 1735 overlap(step 54300) max 0.95% at (38.0,191.5) mean 0.189% wall 10.06% | 73 steps/s, 0 fps, elapsed 764s
+step 60400 cells 1744 overlap(step 60300) max 1.08% at (44.3,172.8) mean 0.180% wall 14.26% | 73 steps/s, 0 fps, elapsed 853s
+speed 1 steps/frame: 1749 cells, 16.1 fps, 16 steps/s, step 14.5 ms + draw 0.9 ms per frame
+speed 4 steps/frame: 1750 cells, 9.3 fps, 37 steps/s, step 59.9 ms + draw 1.0 ms per frame
+speed 10 steps/frame: 1749 cells, 5.3 fps, 53 steps/s, step 141.6 ms + draw 0.9 ms per frame
+downloaded: browser-states.json (17.5 MB, 205 snapshots; checked to parse, valid LowRes.json)

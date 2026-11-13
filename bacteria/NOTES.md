@@ -152,11 +152,55 @@ Same seed, same engine, same machine → identical output (checked: two Rapier r
 same initial cells but diverge after the first contacts. Cross-machine determinism of the
 WebAssembly build was not tested (`@dimforge/rapier2d-deterministic-compat` exists if needed).
 
-<!-- PERF -->
+## Performance
+
+Intel Xeon E-2246G (3.6 GHz), Node 22, one process; median time per simulation step by number of
+cells (seed 7; `--timing-log`, physics only). The chamber holds ~1700–1800 cells once full; the
+largest count seen in a run was ~1820.
+
+| Cells | Rapier, defaults (12 it., 720 Hz) | Rapier, without the contact fix | Box2D |
+|---|---|---|---|
+| 750–1000 | 3.1 ms (323 steps/s) | 2.9 ms | 24.5 ms (41 steps/s) |
+| 1000–1250 | 5.0 ms (202 steps/s) | 4.3 ms | 32.2 ms (31 steps/s) |
+| 1250–1500 | 6.6 ms (151 steps/s) | 6.2 ms | 42.5 ms (24 steps/s) |
+| 1500–1750 | 12.4 ms (81 steps/s) | 12.6 ms | 54.8 ms (18 steps/s) |
+| 1750–2000 | 11.0 ms (91 steps/s) | 11.0 ms | 74.4 ms (13 steps/s) |
+
+Rapier is **6–7× faster** than Box2D at the same cell count, with ~3× the solver work Rapier
+needs by default (12 instead of 4 iterations; with 4 iterations and 30 Hz it ran ~600 steps/s at
+1000 cells but failed the overlap target). A 600 000-step run takes ~2 h instead of ~13 h. The contact fix (replacing colliders) costs up to ~12% while the colony grows and ~0–5%
+once the chamber is full. Step time grows faster than linearly near a full chamber (more contacts
+per cell). Overlap measurement: ~5 ms per snapshot at 1770 cells (every 300 steps: <0.2%).
+
+**Browser** (headless Chrome 156 on the same machine, 1400×900 canvas): physics runs at the same
+speed as in Node (12.5 ms/step at 1684 cells, measured in the page). Drawing takes ~1 ms of
+script time per frame in the phase-contrast and fluorescence views (1700 cells) and ~28 ms in
+the diagnostic view (capsule outlines plus the overlap measurement). The headless browser renders
+on the CPU and showed only 16–22 fps even when paused, so its frame rates are not representative;
+in a desktop browser with GPU canvas, 1 step per frame (12.5 + 1 ms) fits a 60 Hz frame, and
+"Steps/frame" trades smoothness for speed (each extra step adds ~12 ms per frame at a full
+chamber). Running the physics in a Web Worker would decouple the two (not done).
 
 <!-- OVERLAP -->
 
-<!-- ORG -->
+## Rapier vs Box2D: colony organisation
+
+Same seed (7), current model settings, averages over steps 15 000–30 000 (chamber full), from the
+exported states (`tools/organization.py`; ⟨cos 2θ⟩ = +1 for cells along the chamber's long axis
+towards the exit, −1 across it; S = nematic order):
+
+| | cells | mean length `le` | ⟨cos 2θ⟩ centre | ⟨cos 2θ⟩ wall zones | S centre | S wall zones |
+|---|---|---|---|---|---|---|
+| Box2D | 1856 | 2.92 | +0.23 | +0.05 | 0.23 | 0.12 |
+| Rapier | 1695 | 2.95 | +0.32 | −0.01 | 0.34 | 0.06 |
+
+Both engines produce the same organisation: cells in the centre align towards the exit as the
+chamber fills (both reach ⟨cos 2θ⟩ ≈ +0.37–0.39 by step 30 000; Rapier gets there sooner), the
+wall zones stay disordered, and the length distribution matches. Box2D holds ~9% more cells in
+the full chamber because it lets them overlap more (see the overlap report). Over longer runs
+(Rapier, 120 000 steps) the centre stays aligned (+0.2 to +0.4) and the wall-zone cells tend to
+lie across the chamber (⟨cos 2θ⟩ down to −0.27). Box2D was only run to 30 000 steps (it is
+slow), so longer-term organisation was not compared.
 
 ## Worth reviewing / not done
 
