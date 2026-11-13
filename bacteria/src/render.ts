@@ -124,9 +124,10 @@ export class ChamberRenderer {
     this.strokeWalls("#333", 2 / scale, 0);
     for (let r = 0; r < this.regionColors.length; r++) {
       const c = this.regionColors[r];
-      this.strokeCells((k) => this.region[k] === r, "rgba(0,0,0,0.6)", 2 * radius + 1.5 / scale);
       this.strokeCells((k) => this.region[k] === r, `rgb(${255 * c.r},${255 * c.g},${255 * c.b})`, 2 * radius);
     }
+    // True outlines on top, so a cell reaching into a neighbour shows as a line crossing it
+    this.outlineCells(radius, "rgba(0,0,0,0.75)", 1 / scale);
 
     // Overlapping cells (the pairs passed in): their axes, orange, or red when deeper than the target
     const o = options.overlaps;
@@ -181,6 +182,23 @@ export class ChamberRenderer {
       const ux = this.ux[k] * lengthFactor, uy = this.uy[k] * lengthFactor;
       ctx.moveTo(this.x[k] - ux, this.y[k] - uy);
       ctx.lineTo(this.x[k] + ux, this.y[k] + uy);
+    }
+    ctx.strokeStyle = style;
+    ctx.lineWidth = width;
+    ctx.stroke();
+  }
+
+  /** Stroke every cell's capsule outline (two half circles joined by straight sides) as one path. */
+  private outlineCells(radius: number, style: string, width: number): void {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    for (let k = 0; k < this.n; k++) {
+      const x = this.x[k], y = this.y[k], ux = this.ux[k], uy = this.uy[k];
+      const theta = Math.atan2(uy, ux); // direction from centre to end b
+      ctx.moveTo(x + ux + radius * Math.cos(theta - Math.PI / 2), y + uy + radius * Math.sin(theta - Math.PI / 2));
+      ctx.arc(x + ux, y + uy, radius, theta - Math.PI / 2, theta + Math.PI / 2);
+      ctx.arc(x - ux, y - uy, radius, theta + Math.PI / 2, theta + 3 * Math.PI / 2);
+      ctx.closePath();
     }
     ctx.strokeStyle = style;
     ctx.lineWidth = width;
