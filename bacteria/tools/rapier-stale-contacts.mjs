@@ -1,10 +1,12 @@
 // Minimal reproduction: in @dimforge/rapier2d-compat 0.21.0, growing a collider at rest
 // (setHalfHeight / setShape) does not update its existing contacts. A capsule whose tip grows into
 // a fixed box is never pushed out: the contact keeps reporting zero depth. Replacing the collider
-// (remove + create) gives correct contacts, but leaks WebAssembly memory (~13 MB per 1000 steps
-// with 1700 cells replaced every 25 steps; the 4 GB heap ran out after ~230 000 steps). Turning
-// the resized collider by π on its body (same shape for a capsule) also gives correct contacts,
-// without allocating: that is what rapier-simulation.ts does (rapierRefreshContacts).
+// (remove + create) gives correct contacts, but leaks WebAssembly memory when the collider touches
+// others (~13 MB per 1000 steps with 1700 cells replaced every 25 steps; the 4 GB heap ran out after
+// ~230 000 steps). rapier-simulation.ts replaces colliders and rebuilds the world every 10 000
+// steps to return that memory. Turning the resized collider by π on its body (same shape for a
+// capsule) also refreshes contacts here, without allocating, but not all contacts in a packed
+// colony (rapierRefreshContacts=2).
 //
 // usage (from the repository root): node bacteria/tools/rapier-stale-contacts.mjs
 import RAPIER from "@dimforge/rapier2d-compat";

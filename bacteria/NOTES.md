@@ -73,14 +73,29 @@ output byte-identical to before the port; checked for seed 7, 3000 steps).
 | Random numbers | per cell: division share, death, anchor; per new cell: friction, division length | same order | same seed → same run within an engine (not across engines) |
 | Removed cells | `DestroyBody` | `removeRigidBody` (also removes its springs) | |
 
-**Rapier contact bug (important).** In Rapier 0.21, a contact between two bodies that barely move
-relative to each other keeps its old contact points, and resizing a collider
+**Rapier contact bug (important).** In Rapier 0.21, a contact between two colliders that barely
+move relative to each other keeps its old contact points, and resizing a collider
 (`setHalfHeight`/`setShape`) does not refresh them. A cell at rest — most cells once the chamber is
 full — then grows straight into its neighbours and the walls while the contact reports zero depth.
 Overlap rose steadily once the chamber filled (mean penetration 0.2% → 6% of the width over
-25 000 steps). Fix: each growth step replaces the cell's collider (`rapierRefreshContacts=1`), which
-forces fresh contacts; it costs 5–12% of the step time (see Performance). `tools/rapier-stale-contacts.mjs` is a
-minimal reproduction (worth reporting upstream).
+25 000 steps). `tools/rapier-stale-contacts.mjs` is a minimal reproduction (worth reporting
+upstream).
+
+- Fix (`rapierRefreshContacts=1`, default): replace the cell's collider on every growth step, which
+  gives it fresh contacts. **Rapier 0.21 leaks WebAssembly memory** doing this when the collider
+  touches others (~13 MB per 1000 steps with ~1700 cells; colliders that touch nothing don't leak):
+  the first 600 000-step run aborted at step ~231 500 with a WebAssembly "unreachable" trap when
+  the 4 GB heap ran out. Freeing a world gives the memory back, so every
+  `rapierRebuildInterval` (10 000) steps the simulation moves all cells, anchors and walls into a
+  fresh Rapier world with identical state (positions, angles, velocities, masses, colliders,
+  springs) and frees the old one. A probe that replaces 1700 touching colliders every 25 steps
+  plateaus at ~430 MB this way.
+- Tried and kept as an option (`rapierRefreshContacts=2`): resize in place and turn the collider by
+  π on its body (same capsule in the world, no allocation). Most contacts are recomputed, but some
+  between two cells that both turned are not; validation (3 seeds × 120 000 steps): 2 / 2 / 8 of
+  391 snapshots over the overlap target (worst 11%) instead of 0 / 0 / 0.
+- The runner saves the snapshots recorded so far (and exits with status 4) if the engine throws;
+  the viewer pauses with a message.
 
 **Changes to the model, with reasons** (all apply to both engines; `0` restores the original):
 
@@ -185,6 +200,7 @@ needs by default (12 instead of 4 iterations; with 4 iterations and 30 Hz it ran
 contact fix (replacing colliders) costs up to ~12% while the colony grows and ~0–5% once the
 chamber is full. Step time grows faster than linearly near a full chamber (more contacts
 per cell). Overlap measurement: ~5 ms per snapshot at 1770 cells (every 300 steps: <0.2%).
+Memory: <!-- MEM -->
 
 **Browser** (headless Chrome 156 on the same machine, 1400×900 canvas): physics runs at the same
 speed as in Node (12.5 ms/step at 1684 cells, measured in the page). Drawing takes ~1 ms of
