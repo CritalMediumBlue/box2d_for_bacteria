@@ -79,7 +79,7 @@ relative to each other keeps its old contact points, and resizing a collider
 full — then grows straight into its neighbours and the walls while the contact reports zero depth.
 Overlap rose steadily once the chamber filled (mean penetration 0.2% → 6% of the width over
 25 000 steps). Fix: each growth step replaces the cell's collider (`rapierRefreshContacts=1`), which
-forces fresh contacts; it costs about 9% of the step time. `tools/rapier-stale-contacts.mjs` is a
+forces fresh contacts; it costs 5–12% of the step time (see Performance). `tools/rapier-stale-contacts.mjs` is a
 minimal reproduction (worth reporting upstream).
 
 **Changes to the model, with reasons** (all apply to both engines; `0` restores the original):
@@ -114,16 +114,29 @@ measured every snapshot; statistics from step 9000, when the chamber is nearly f
 | 8 iterations, 240 Hz | 1 / 121 | 20% | 1.3% | 0.0 | 50% |
 | 16 iterations, 240 Hz | 17 / 121 | 13% | 2.6% | 0.2 | 50% |
 | 2 substeps × 8 iterations, 240 Hz | 18 / 121 | 52% | 2.0% | 0.2 | 45% |
-| **8 iterations, 480 Hz (default)** | **0 / 121** | **4.0%** | **0.8%** | **0.0** | 27% |
+| 8 iterations, 480 Hz | 0 / 121 | 4.0% | 0.8% | 0.0 | 27% |
 
 (The last six rows have all fixes, including `dragClamp` and `centredDivision`. Percentages are of
 the cell width; "wall" is the deepest penetration into a wall or wall triangle.)
 
-The failures in the stiffer settings are rare, local events in the dead-end top corners after
-~27 000 steps: one pair (or one cell against the wall) slowly pressed deeper over thousands of
-steps while the cells around it are packed and held by anchors. More iterations or substeps did
-not prevent them; stiffer contacts did. Multi-seed and longer checks of the default: see
-"Overlap results" below and `reports/overlap-report.md`.
+The failures in the softer settings are rare, local events, mostly in the dead-end top corners
+after ~27 000 steps: one pair (or one cell against the wall) pressed deeper over many steps while
+the cells around it are packed and held by anchors. More iterations or substeps did not prevent
+them; stiffer contacts did.
+
+Then three seeds (7, 11, 23) × 120 000 steps, statistics from step 3000:
+
+| Setting | Snapshots over target (per seed) | Worst max | Median max | Relative step time |
+|---|---|---|---|---|
+| 8 iterations, 480 Hz | 6 / 3 / 9 of 391 | 13.6% | 1.3–1.5% | 1 |
+| 12 iterations, 480 Hz | 2 / 0 / 1 of 391 | 8.7% (and one 100%¹) | 1.0% | ~1.2 |
+| 16 iterations, 480 Hz (to ~84 000 steps) | 20 / 2 / 7 of ~250 | 32% | — | ~1.4 |
+| **12 iterations, 720 Hz (default)** | **0 / 0 / 0 of 391** | **4.9%** | **1.0%** | ~1.2 |
+
+¹ a pair crossed at the random start that separated only after the warm-up.
+
+So the default is 12 iterations with 720 Hz contacts. Contact stiffness costs no step time; more
+iterations do, and beyond 12 they made things worse at 480 Hz (as 16 did at 240 Hz above).
 
 Contact stiffness can be changed per run (`--set rapierContactFrequency=…`,
 `rapierSolverIterations`, `rapierSubsteps`, `rapierPgsIterations`).
@@ -168,8 +181,9 @@ largest count seen in a run was ~1820.
 
 Rapier is **6–7× faster** than Box2D at the same cell count, with ~3× the solver work Rapier
 needs by default (12 instead of 4 iterations; with 4 iterations and 30 Hz it ran ~600 steps/s at
-1000 cells but failed the overlap target). A 600 000-step run takes ~2 h instead of ~13 h. The contact fix (replacing colliders) costs up to ~12% while the colony grows and ~0–5%
-once the chamber is full. Step time grows faster than linearly near a full chamber (more contacts
+1000 cells but failed the overlap target). A 600 000-step run takes ~2 h instead of ~13 h. The
+contact fix (replacing colliders) costs up to ~12% while the colony grows and ~0–5% once the
+chamber is full. Step time grows faster than linearly near a full chamber (more contacts
 per cell). Overlap measurement: ~5 ms per snapshot at 1770 cells (every 300 steps: <0.2%).
 
 **Browser** (headless Chrome 156 on the same machine, 1400×900 canvas): physics runs at the same
@@ -210,8 +224,9 @@ slow), so longer-term organisation was not compared.
    contacts may remove them at more cost (see "Overlap results"). The count for the long run is
    in `reports/overlap-report.md`.
 2. **Wall penetration under sustained pressure.** Not part of the stated target (pairwise), but
-   measured: cells pressed into the walls and between the small wall triangles in the dead-end
-   top corners reach 0.1–0.25 (12–30% of the width), occasionally a full radius. Contacts there
+   measured: the deepest cell–wall contact per snapshot is typically ~14% of the cell width (cells
+   pressed into the walls and between the small wall triangles, mostly in the dead-end top
+   corners), and occasionally a cell's axis reaches the wall line (50%). Contacts there
    carry the colony's accumulated pressure. Isolated tests show the contacts themselves work; it
    is the solver's limit under that load. Options: more iterations, or a small contact skin on
    the walls (`ColliderDesc.setContactSkin`; untested), or reviewing why the pressure builds (next
@@ -224,7 +239,7 @@ slow), so longer-term organisation was not compared.
    overlap excursions and the wall penetration happen. If anchors are meant to pin cells, a stiffer
    spring, a maximum stretch (detach), or a fixed joint would match that better.
 4. **Rapier contact bug** (`tools/rapier-stale-contacts.mjs`): worth reporting to dimforge. If it
-   is fixed upstream, `rapierRefreshContacts=0` saves ~9% of the step time.
+   is fixed upstream, `rapierRefreshContacts=0` saves 5–12% of the step time.
 5. **Drag model.** Drag is still the testbed's kick every 25 steps (now clamped). A continuous
    damping would be smoother but changes the dynamics and needs recalibration.
 6. **Kept testbed quirks**: mass fixed at birth (counts the end caps twice); anchors created for a
