@@ -46,8 +46,11 @@ export const DEFAULT_PARAMS = {
   randomDeathProbability: 0.001 * 0.15, // per cell per growth event
 
   // --- drag (applied on growth steps only, once per Box2D fixture, as in the original test) ---
-  airResistance: 0.007,
-  angularAirResistance: 0.007,
+  // Scaled with the 0.8x cell size so each drag kick changes a cell's velocity by the same fraction
+  // as before: mass scales with area (0.8^2), rotational inertia with mass x length^2 (0.8^4).
+  // Unscaled, the kick over-corrects (reverses) a small cell's velocity and spin. Testbed value: 0.007.
+  airResistance: 0.007 * 0.8 ** 2,
+  angularAirResistance: 0.007 * 0.8 ** 4,
 
   // --- surface attachment near the walls ---
   anchorProbability: 0.0025, // per cell per growth event, when near a wall
