@@ -10,6 +10,7 @@
     "outDir": "./build",
     "declaration": true,
     "sourceMap": true,
+    "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
       "@box2d": [ "../build/index" ]

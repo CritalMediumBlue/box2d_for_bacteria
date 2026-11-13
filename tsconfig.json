@@ -12,6 +12,7 @@
     "outDir": "./build",
     "declaration": true,
     "sourceMap": true,
+    "skipLibCheck": true,
   },
   "include": [
     "src/**/*.ts"
