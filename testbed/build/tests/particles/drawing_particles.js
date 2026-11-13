@@ -290,7 +290,7 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
              * Set bit 31 to distiguish these values from particle flags.
              */
             DrawingParticles.Parameters = {
-                e_parameterBegin: (1 << 31),
+                e_parameterBegin: (1 << 31), // Start of this parameter namespace.
                 e_parameterMove: (1 << 31) | (1 << 0),
                 e_parameterRigid: (1 << 31) | (1 << 1),
                 e_parameterRigidBarrier: (1 << 31) | (1 << 2),

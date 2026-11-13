@@ -30,6 +30,8 @@ export class CircleStack extends testbed.Test {
 
   constructor() {
     super();
+    //set gravity to 0
+    this.m_world.SetGravity(new b2.Vec2(0.0, 0.0));
 
     {
       const bd: b2.BodyDef = new b2.BodyDef();
@@ -42,7 +44,7 @@ export class CircleStack extends testbed.Test {
 
     {
       const shape: b2.CircleShape = new b2.CircleShape();
-      shape.m_radius = 1.0;
+      shape.m_radius = 1.0 / 4;
 
       for (let i: number = 0; i < CircleStack.e_count; ++i) {
         const bd: b2.BodyDef = new b2.BodyDef();
@@ -53,7 +55,7 @@ export class CircleStack extends testbed.Test {
 
         this.m_bodies[i].CreateFixture(shape, 1.0);
 
-        this.m_bodies[i].SetLinearVelocity(new b2.Vec2(0.0, -50.0));
+        this.m_bodies[i].SetLinearVelocity(new b2.Vec2(0.0, -5.0));
       }
     }
   }

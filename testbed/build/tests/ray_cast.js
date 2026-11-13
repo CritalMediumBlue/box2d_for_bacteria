@@ -1,8 +1,7 @@
 // MIT License
-
-System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1, context_1) {
+System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
     "use strict";
-    var b2, testbed, tf, Pyramid, testIndex;
+    var b2, testbed, RayCastClosestCallback, RayCastAnyCallback, RayCastMultipleCallback, RayCastMode, RayCast, testIndex;
     var __moduleName = context_1 && context_1.id;
     return {
         setters: [
@@ -11,390 +10,359 @@ System.register(["@box2d", "@testbed", '@tensorflow/tfjs'], function (exports_1,
             },
             function (testbed_1) {
                 testbed = testbed_1;
-            },
-            function (tf_1) {
-                tf = tf_1;
             }
         ],
-        
-            execute: function () {   
-                const MIN_X = -50, MAX_X = 50; // X range
-                const MIN_Y = 140, MAX_Y = 200; // Y range
-                const MIN_SIZE = 3, MAX_SIZE = 6; // Size range of the initial bacteria
-                const COLOR = new b2.Color(0.3, 0.35, 0.3); // Color
-                const REPRODUCTION_PROPORTION_MIN = 0.3; // Minimum proportion of the parent's length for the child
-                const REPRODUCTION_PROPORTION_MAX = 0.2; // 0.3 + 0.2 = 0.5 maximum proportion of the parent's length for the child
-                const RANDOM_THRESHOLD = 0.001 * 0.15;
-                const JOINT_CREATION_THRESHOLD = 0.0025;
-                const RATE = 0.002*0.8;
-                const GROWTH_RATE = 1 + RATE;
-                const MODIFIED_GROWTH_RATE = 1 + (RATE * 1);
-                const TIME_STEP_INTERVAL = 150;
-                const AIR_RESISTANCE = 0.007;
-                const ANGULAR_AIR_RESISTANCE = 0.007;
-
-                Pyramid = class Pyramid extends testbed.Test {
-                    constructor() {
-                        super();
-                        this.m_world.SetGravity(new b2.Vec2(0, 0));
-
-                        this.dynamicBodyCount = 0;
- 
-                        for (let i = 1; i <= 1000; ++i) {
-                            // Generate a random position within the defined area
-                            let x = Math.random() * (MAX_X - MIN_X) + MIN_X;
-                            let y = Math.random() * (MAX_Y - MIN_Y) + MIN_Y;
-
-                            // Generate a random angle between 0 and 2π
-                            let angle = Math.random() * 2 * Math.PI;
-
-                            // Generate a random size within the defined range
-                            let size = 0.2*Math.random() * (MAX_SIZE - MIN_SIZE) + MIN_SIZE;
-
-                            this.createBacteria(this.m_world, new b2.Vec2(x, y), angle, size, COLOR, BigInt(1000+i));
-                            this.dynamicBodyCount++;
-                        }
-
-                        this.time_step = 0;
-                        this.data=[];
-                        this.bodies_params = [];
-
-
-                        // Create triangles
-                        this.createTrianglesy(12, [new b2.Vec2(50, 140), new b2.Vec2(50, 142), new b2.Vec2(49, 141)], [new b2.Vec2(-50, 140), new b2.Vec2(-50, 142), new b2.Vec2(-49, 141)]);
-                        this.createTrianglesx(20, [new b2.Vec2(-50, 200), new b2.Vec2(-48, 200), new b2.Vec2(-49, 199)]);
-
-                        // Create the container
-                        this.createContainer([new b2.Vec2(-50, 200), new b2.Vec2(50, 200)], [new b2.Vec2(50, 200), new b2.Vec2(50, 140)], [new b2.Vec2(-50, 200), new b2.Vec2(-50, 140)]);
-                    
-                    }
-
-                    Step(settings) {
-                        super.Step(settings);
-                        if (!settings.m_pause) {
-
-                            this.time_step += 1;
-                            
-                            if (this.time_step % 25 === 0) {
-
-                                
-                                for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
-                                    if (body.GetType() === b2.BodyType.b2_dynamicBody) {     
-
-                                        let circlePositions = [];
-                                        for (let fixture = body.GetFixtureList(); fixture; fixture = fixture.GetNext()) {
-                                            const shape = fixture.GetShape();
-                                            const isPolygon = shape.GetType() === b2.ShapeType.e_polygonShape;
-                                            const isCircle = shape.GetType() === b2.ShapeType.e_circleShape;
-
-                                            if (isPolygon) {
-                                                shape.m_vertices.forEach(vertex => vertex.y *= body.growthRate);
-                                            } else if (isCircle) {
-                                                shape.m_p.y *= body.growthRate;
-                                                circlePositions.push(shape.m_p);
-                                            }
-                                            // Calculate the air resistance force
-                                            const velocity = body.GetLinearVelocity();
-                                            const airResistanceForce = new b2.Vec2(-AIR_RESISTANCE * velocity.x, -AIR_RESISTANCE * velocity.y);
-
-                                            // Apply the air resistance force to the body
-                                            body.ApplyForce(airResistanceForce, body.GetWorldCenter(), true);
-
-                                            // Calculate the air resistance torque
-                                            const angularVelocity = body.GetAngularVelocity();
-                                            const airResistanceTorque = -ANGULAR_AIR_RESISTANCE * angularVelocity;
-
-                                            // Apply the air resistance torque to the body
-                                            body.ApplyTorque(airResistanceTorque, true);
-                                        }
-                                        // Destructure circlePositions for readability
-                                        const [{x: x1, y: y1}, {x: x2, y: y2}] = circlePositions;
-
-                                        // Calculate difference vector
-                                        const diff = new b2.Vec2(x1 - x2, y1 - y2);
-                                        const length = diff.Length();
-
-                                        // Get original position and angle
-                                        const originalPosition = body.GetPosition();
-                                        const originalAngle = body.GetAngle();
-
-                                        if (length >= body.reproductiveLength) {
-                                            const a = 0.5; // Explain what 'a' represents
-                                            const proportion = REPRODUCTION_PROPORTION_MIN + Math.random() * REPRODUCTION_PROPORTION_MAX;
-
-                                            // Group related calculations into helper functions
-                                            const factorA = this.calculateFactor(proportion, length, a);
-                                            const factorB = this.calculateFactor(1 - proportion, length, a);
-                                            const factor2A = this.calculateFactor2(length, a, proportion);
-                                            const factor2B = this.calculateFactor2(length, a, 1 - proportion);
-                                            const offsetA = this.calculateOffset(factorA, originalAngle);
-                                            const offsetB = this.calculateOffset(factorB, originalAngle);
-
-                                            // Calculate new positions
-                                            const newPosition1 = new b2.Vec2(originalPosition.x - offsetB.x, originalPosition.y - offsetB.y);
-                                            const newPosition2 = new b2.Vec2(originalPosition.x + offsetA.x, originalPosition.y + offsetA.y);
-
-                                          
-                                            // Calculate the new tags
-                                            const newTag1 = body.tag * BigInt(2);
-                                            const newTag2 = newTag1 + BigInt(1);
-
-                                       
-
-                                            // Create new bacteria and increment body count
-                                            this.createBacteria(this.m_world, newPosition1, originalAngle, factor2A, body.myCustomColor, newTag1);
-                                            this.createBacteria(this.m_world, newPosition2, originalAngle, factor2B, body.myCustomColor, newTag2);
-                                            this.dynamicBodyCount += 2;
-
-                                            // Mark body for destruction
-                                            body.userData = { destroy: true };
-                                        }
-
-
-
-                                        if (originalPosition.x < MIN_X || originalPosition.x > MAX_X || originalPosition.y < MIN_Y || originalPosition.y > MAX_Y || Math.random() < RANDOM_THRESHOLD) {
-                                            body.userData = { destroy: true };
-                                        }
-
-                                        const Close_to_walls = (originalPosition.x < MIN_X+20 || originalPosition.x > MAX_X-20 );
-                                        if (Close_to_walls) {
-                                            body.myCustomColor = new b2.Color(0.1, 0.8, 0.18);
-                                            body.growthRate = MODIFIED_GROWTH_RATE;
-                                            if (Math.random() < JOINT_CREATION_THRESHOLD) {
-                                                this.createStaticJoints(this.m_world, body);
-                                            }
-                                        } else {
-                                            body.myCustomColor = new b2.Color(0.8, 0.1, 0.6);
-                                            body.growthRate = GROWTH_RATE;
-                                        }
-
-                              
-
-                                        if (this.time_step % TIME_STEP_INTERVAL === 0) {
-                                            let orientation;
-                                            if (originalAngle > 0) {
-                                                orientation = (originalAngle / Math.PI) % 1;
-                                            } else {
-                                                orientation = 1 + (originalAngle / Math.PI) % 1;
-                                            }
-                                            if (!body.userData) {
-                                                body.userData = {};
-                                            }
-
-                                            
-                                            this.bodies_params.push({
-                                                x: originalPosition.x,
-                                                y: originalPosition.y,
-                                                angle: orientation,
-                                                length: length,
-                                                tag: body.tag,
-                                                time: this.time_step/TIME_STEP_INTERVAL
-                                            });
-                                            
-
-                                        }  
-                        
-                                    
-                                    }
-                                    
-                                }
-
-
-                                // Destroy bodies marked for destruction
-                                
-                                for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
-                                
-                                    if (body.userData && body.userData.destroy) {
-                                        this.m_world.DestroyBody(body);
-                                        this.dynamicBodyCount--;
-                                    }
-
-                                }
-
-
-                                const JOINT_LIFETIME_MS =200000;  // 1 second
-
-                                for (let joint = this.m_world.GetJointList(); joint; joint = joint.GetNext()) {
-                                    if (Date.now() - joint.creationTime >= JOINT_LIFETIME_MS) {
-                                        this.m_world.DestroyJoint(joint);
-                                    }
-                                }
-
-                                const BODY_LIFETIME_MS =200000;  
-
-                                for (let body = this.m_world.GetBodyList(); body; body = body.GetNext()) {
-                                    const userData = body.GetUserData();
-                                    if (userData && Date.now() - userData.creationTime >= BODY_LIFETIME_MS) {
-                                        this.m_world.DestroyBody(body);
-                                    }
-                                }
-
-        
-                            }
-
-
-                        }     
-                    }
-                    download_data() {
-                        const header = 'time\tx\ty\tangle\tlength\tID';
-                        const dataRows = this.bodies_params.map(d => `${d.time}\t${d.x}\t${d.y}\t${d.angle}\t${d.length}\t${d.tag}`);
-                        const dataStr = [header, ...dataRows].join('\n');
-                        const dataBlob = new Blob([dataStr], {type: 'text/plain'});
-                        const url = URL.createObjectURL(dataBlob);
-
-                        const link = document.createElement('a');
-                        link.download = 'data.txt';
-                        link.href = url;
-                        link.click();
-                    }
-
-                    Keyboard(key) {
-                        switch (key) {
-                            case "d":
-                                this.download_data();
-                                break;
-                        }
-                    } 
-                    static Create() {
-                        return new Pyramid();
-                    }
-                    calculateFactor(proportion, length, a) {
-                        return proportion * (1 / 2) * length + (a / 2);
-                    }
-                    
-                    calculateFactor2(length, a, proportion) {
-                        return (length - (2 * a)) * proportion;
-                    }
-                    
-                    calculateOffset(factor, originalAngle) {
-                        return new b2.Vec2(-factor * Math.sin(originalAngle), factor * Math.cos(originalAngle));
-                    }
-                    
-                    calculateNewPosition(originalPosition, offset) {
-                        return new b2.Vec2(originalPosition.x - offset.x, originalPosition.y - offset.y);
-                    }
-                    createBody(vec1, vec2) {
-                        let bodyDef = new b2.BodyDef();
-                        let body = this.m_world.CreateBody(bodyDef);
-                        let edge = new b2.EdgeShape();
-                        edge.SetTwoSided(vec1, vec2);
-                        body.CreateFixture(edge, 0);
-                    }
-                    createTriangleBody(x, y, vertices) {
-                        let triangleBodyDef = new b2.BodyDef();
-                        triangleBodyDef.position.Set(x, y);
-                        let triangleBody = this.m_world.CreateBody(triangleBodyDef);
-                        let triangleShape = new b2.PolygonShape();
-                        triangleShape.Set(vertices, 3);
-                        triangleBody.CreateFixture(triangleShape, 0);
-                    }
-                    createTrianglesx(count, ...vecs) {
-                        for(let i = 0; i < count; i++) {
-                            vecs.forEach(vec => this.createTriangleBody(i * 5, 0, vec));
+        execute: function () {
+            // This test demonstrates how to use the world ray-cast feature.
+            // NOTE: we are intentionally filtering one of the polygons, therefore
+            // the ray will always miss one type of polygon.
+            // This callback finds the closest hit. Polygon 0 is filtered.
+            RayCastClosestCallback = class RayCastClosestCallback extends b2.RayCastCallback {
+                constructor() {
+                    super();
+                    this.m_hit = false;
+                    this.m_point = new b2.Vec2();
+                    this.m_normal = new b2.Vec2();
+                }
+                ReportFixture(fixture, point, normal, fraction) {
+                    const body = fixture.GetBody();
+                    const userData = body.GetUserData();
+                    if (userData) {
+                        const index = userData.index;
+                        if (index === 0) {
+                            // By returning -1, we instruct the calling code to ignore this fixture
+                            // and continue the ray-cast to the next fixture.
+                            return -1;
                         }
                     }
-                    createTrianglesy(count, ...vecs) {
-                        for(let i = 0; i < count; i++) {
-                            vecs.forEach(vec => this.createTriangleBody(0, i * 5, vec));
+                    this.m_hit = true;
+                    this.m_point.Copy(point);
+                    this.m_normal.Copy(normal);
+                    // By returning the current fraction, we instruct the calling code to clip the ray and
+                    // continue the ray-cast to the next fixture. WARNING: do not assume that fixtures
+                    // are reported in order. However, by clipping, we can always get the closest fixture.
+                    return fraction;
+                }
+            };
+            // This callback finds any hit. Polygon 0 is filtered. For this type of query we are usually
+            // just checking for obstruction, so the actual fixture and hit point are irrelevant. 
+            RayCastAnyCallback = class RayCastAnyCallback extends b2.RayCastCallback {
+                constructor() {
+                    super();
+                    this.m_hit = false;
+                    this.m_point = new b2.Vec2();
+                    this.m_normal = new b2.Vec2();
+                }
+                ReportFixture(fixture, point, normal, fraction) {
+                    const body = fixture.GetBody();
+                    const userData = body.GetUserData();
+                    if (userData) {
+                        const index = userData.index;
+                        if (index === 0) {
+                            // By returning -1, we instruct the calling code to ignore this fixture
+                            // and continue the ray-cast to the next fixture.
+                            return -1;
                         }
                     }
-
-                    createContainer(...vecs) {
-                        vecs.forEach(vec => this.createBody(vec[0], vec[1]));
+                    this.m_hit = true;
+                    this.m_point.Copy(point);
+                    this.m_normal.Copy(normal);
+                    // At this point we have a hit, so we know the ray is obstructed.
+                    // By returning 0, we instruct the calling code to terminate the ray-cast.
+                    return 0;
+                }
+            };
+            // This ray cast collects multiple hits along the ray. Polygon 0 is filtered.
+            // The fixtures are not necessary reported in order, so we might not capture
+            // the closest fixture.
+            RayCastMultipleCallback = class RayCastMultipleCallback extends b2.RayCastCallback {
+                constructor() {
+                    super();
+                    this.m_points = b2.Vec2.MakeArray(RayCastMultipleCallback.e_maxCount);
+                    this.m_normals = b2.Vec2.MakeArray(RayCastMultipleCallback.e_maxCount);
+                    this.m_count = 0;
+                }
+                ReportFixture(fixture, point, normal, fraction) {
+                    const body = fixture.GetBody();
+                    const userData = body.GetUserData();
+                    if (userData) {
+                        const index = userData.index;
+                        if (index === 0) {
+                            // By returning -1, we instruct the calling code to ignore this fixture
+                            // and continue the ray-cast to the next fixture.
+                            return -1;
+                        }
                     }
-                    createBacteria(world, position, angle, length, myColor, tag) {
-                        const random = Math.random();
+                    // DEBUG: b2.Assert(this.m_count < RayCastMultipleCallback.e_maxCount);
+                    this.m_points[this.m_count].Copy(point);
+                    this.m_normals[this.m_count].Copy(normal);
+                    ++this.m_count;
+                    if (this.m_count === RayCastMultipleCallback.e_maxCount) {
+                        // At this point the buffer is full.
+                        // By returning 0, we instruct the calling code to terminate the ray-cast.
+                        return 0;
+                    }
+                    // By returning 1, we instruct the caller to continue without clipping the ray.
+                    return 1;
+                }
+            };
+            RayCastMultipleCallback.e_maxCount = 3;
+            (function (RayCastMode) {
+                RayCastMode[RayCastMode["e_closest"] = 0] = "e_closest";
+                RayCastMode[RayCastMode["e_any"] = 1] = "e_any";
+                RayCastMode[RayCastMode["e_multiple"] = 2] = "e_multiple";
+            })(RayCastMode || (RayCastMode = {}));
+            RayCast = class RayCast extends testbed.Test {
+                constructor() {
+                    super();
+                    this.m_bodyIndex = 0;
+                    this.m_bodies = [];
+                    this.m_polygons = [];
+                    this.m_circle = new b2.CircleShape();
+                    this.m_edge = new b2.EdgeShape();
+                    this.m_angle = 0;
+                    this.m_mode = RayCastMode.e_closest;
+                    for (let i = 0; i < 4; ++i) {
+                        this.m_polygons[i] = new b2.PolygonShape();
+                    }
+                    // Ground body
+                    {
                         const bd = new b2.BodyDef();
-                        bd.type = b2.BodyType.b2_dynamicBody;
-                        bd.position.Set(position.x, position.y);
-                        bd.angle = angle; 
-                        const body = world.CreateBody(bd);
-                        let a = 0.5; 
-                        let b = length/2; 
-                        // Set restitution for the box
-                        const boxFixtureDef = {shape: new b2.PolygonShape().SetAsBox(a, b), density: 0.0001, restitution: 0.0, friction: random};
-                        body.CreateFixture(boxFixtureDef);
-                        const circleShape = new b2.CircleShape(a); 
-                        // Set restitution for the circles
-                        const circleFixtureDef = {shape: circleShape, density: 0.0001, restitution: 0.0, friction: random};
-                        [-b, b].forEach(dy => {
-                            circleShape.m_p.Set(0, dy);
-                            body.CreateFixture(circleFixtureDef);
-                        });
-                        body.growthRate = GROWTH_RATE;
-                        body.reproductiveLength = 6 + (Math.random()-0.5)*2.5;
-                        body.myCustomColor = myColor;
-                        body.tag = tag;
-                        return body;
+                        const ground = this.m_world.CreateBody(bd);
+                        const shape = new b2.EdgeShape();
+                        shape.SetTwoSided(new b2.Vec2(-40.0, 0.0), new b2.Vec2(40.0, 0.0));
+                        ground.CreateFixture(shape, 0.0);
                     }
-                    createJointsToNearbyBodies(world, body, maxDistance) {
-                        let bodyPos = body.GetWorldCenter();
-                        
-                        for (let otherBody = world.GetBodyList(); otherBody; otherBody = otherBody.GetNext()) {
-                            if (otherBody === body) continue;
-
-                            
-                            let otherBodyPos = otherBody.GetWorldCenter();
-                            let distanceVec = b2.Vec2.SubVV(bodyPos, otherBodyPos, new b2.Vec2());
-                            let distance = distanceVec.Length();
-                            
-                            if (distance <= maxDistance) {
-                                const jd = new b2.DistanceJointDef();
-                                let p1, p2, d;
-                                const frequencyHz = 1;
-                                const dampingRatio = 0.3;
-                                
-                                jd.bodyA = body;
-                                jd.bodyB = otherBody;
-                                b2.LinearStiffness(jd, frequencyHz, dampingRatio, jd.bodyA, jd.bodyB);
-                                jd.localAnchorA.Set(0.0, 0.0);
-                                jd.localAnchorB.Set(0.0, 0.0);
-                                p1 = jd.bodyA.GetWorldPoint(jd.localAnchorA, new b2.Vec2());
-                                p2 = jd.bodyB.GetWorldPoint(jd.localAnchorB, new b2.Vec2());
-                                d = b2.Vec2.SubVV(p2, p1, new b2.Vec2());
-                                jd.length = d.Length();
-                                jd.collideConnected = true;
-
-                                
-                                world.CreateJoint(jd);
-
-                            }
-                        
+                    {
+                        const vertices = [ /*3*/];
+                        vertices[0] = new b2.Vec2(-0.5, 0.0);
+                        vertices[1] = new b2.Vec2(0.5, 0.0);
+                        vertices[2] = new b2.Vec2(0.0, 1.5);
+                        this.m_polygons[0].Set(vertices, 3);
+                    }
+                    {
+                        const vertices = [ /*3*/];
+                        vertices[0] = new b2.Vec2(-0.1, 0.0);
+                        vertices[1] = new b2.Vec2(0.1, 0.0);
+                        vertices[2] = new b2.Vec2(0.0, 1.5);
+                        this.m_polygons[1].Set(vertices, 3);
+                    }
+                    {
+                        const w = 1.0;
+                        const b = w / (2.0 + b2.Sqrt(2.0));
+                        const s = b2.Sqrt(2.0) * b;
+                        const vertices = [ /*8*/];
+                        vertices[0] = new b2.Vec2(0.5 * s, 0.0);
+                        vertices[1] = new b2.Vec2(0.5 * w, b);
+                        vertices[2] = new b2.Vec2(0.5 * w, b + s);
+                        vertices[3] = new b2.Vec2(0.5 * s, w);
+                        vertices[4] = new b2.Vec2(-0.5 * s, w);
+                        vertices[5] = new b2.Vec2(-0.5 * w, b + s);
+                        vertices[6] = new b2.Vec2(-0.5 * w, b);
+                        vertices[7] = new b2.Vec2(-0.5 * s, 0.0);
+                        this.m_polygons[2].Set(vertices, 8);
+                    }
+                    {
+                        this.m_polygons[3].SetAsBox(0.5, 0.5);
+                    }
+                    {
+                        this.m_circle.m_radius = 0.5;
+                    }
+                    {
+                        this.m_edge.SetTwoSided(new b2.Vec2(-1, 0), new b2.Vec2(1, 0));
+                    }
+                    this.m_bodyIndex = 0;
+                    for (let i = 0; i < RayCast.e_maxBodies; ++i) {
+                        this.m_bodies[i] = null;
+                    }
+                    this.m_angle = 0;
+                    this.m_mode = RayCastMode.e_closest;
+                }
+                CreateBody(index) {
+                    const old_body = this.m_bodies[this.m_bodyIndex];
+                    if (old_body !== null) {
+                        this.m_world.DestroyBody(old_body);
+                        this.m_bodies[this.m_bodyIndex] = null;
+                    }
+                    const bd = new b2.BodyDef();
+                    const x = b2.RandomRange(-10.0, 10.0);
+                    const y = b2.RandomRange(0.0, 20.0);
+                    bd.position.Set(x, y);
+                    bd.angle = b2.RandomRange(-b2.pi, b2.pi);
+                    bd.userData = {};
+                    bd.userData.index = index;
+                    if (index === 4) {
+                        bd.angularDamping = 0.02;
+                    }
+                    const new_body = this.m_bodies[this.m_bodyIndex] = this.m_world.CreateBody(bd);
+                    if (index < 4) {
+                        const fd = new b2.FixtureDef();
+                        fd.shape = this.m_polygons[index];
+                        fd.friction = 0.3;
+                        new_body.CreateFixture(fd);
+                    }
+                    else if (index < 5) {
+                        const fd = new b2.FixtureDef();
+                        fd.shape = this.m_circle;
+                        fd.friction = 0.3;
+                        new_body.CreateFixture(fd);
+                    }
+                    else {
+                        const fd = new b2.FixtureDef();
+                        fd.shape = this.m_edge;
+                        fd.friction = 0.3;
+                        new_body.CreateFixture(fd);
+                    }
+                    this.m_bodyIndex = (this.m_bodyIndex + 1) % RayCast.e_maxBodies;
+                }
+                DestroyBody() {
+                    for (let i = 0; i < RayCast.e_maxBodies; ++i) {
+                        const body = this.m_bodies[i];
+                        if (body !== null) {
+                            this.m_world.DestroyBody(body);
+                            this.m_bodies[i] = null;
+                            return;
                         }
-                        
                     }
-                    createStaticJoints(world, body) {
-                        // First, create a static ground body at the body's current position
-                        const groundBodyDef = new b2.BodyDef();
-                        groundBodyDef.position.Set(body.GetPosition().x, body.GetPosition().y);
-                        const ground = world.CreateBody(groundBodyDef);
-                        
-                        // Then, define a joint between the body and the new static ground body
-                        const jd = new b2.DistanceJointDef();
-                        const frequencyHz = 0.8;
-                        const dampingRatio = 0.3;
-                        
-                        jd.bodyA = body;
-                        jd.bodyB = ground;
-                        // Set anchor points on both bodies to the current position, assuming the reference point is at the center
-                        jd.localAnchorA.Set(0, 0);
-                        jd.localAnchorB.Set(0, 0);
-                    
-                        // Applying linear stiffness to the joint definition
-                        b2.LinearStiffness(jd, frequencyHz, dampingRatio, jd.bodyA, jd.bodyB);
-                        
-                        // Since both anchors are at the bodies' centers, we set length to 0 for a joint without slack
-                        jd.length = 0;
-                        jd.collideConnected = false;
-                        
-                        // Finally, create the joint in the world
-                        world.CreateJoint(jd);
-                        ground.SetUserData({ creationTime: Date.now() });
-                    }  
+                }
+                Keyboard(key) {
+                    switch (key) {
+                        case "1":
+                        case "2":
+                        case "3":
+                        case "4":
+                        case "5":
+                        case "6":
+                            this.CreateBody(parseInt(key, 10) - 1);
+                            break;
+                        case "d":
+                            this.DestroyBody();
+                            break;
+                        case "m":
+                            if (this.m_mode === RayCastMode.e_closest) {
+                                this.m_mode = RayCastMode.e_any;
+                            }
+                            else if (this.m_mode === RayCastMode.e_any) {
+                                this.m_mode = RayCastMode.e_multiple;
+                            }
+                            else if (this.m_mode === RayCastMode.e_multiple) {
+                                this.m_mode = RayCastMode.e_closest;
+                            }
+                    }
+                }
+                Step(settings) {
+                    const advanceRay = !settings.m_pause || settings.m_singleStep;
+                    super.Step(settings);
+                    testbed.g_debugDraw.DrawString(5, this.m_textLine, "Press 1-6 to drop stuff, m to change the mode");
+                    this.m_textLine += testbed.DRAW_STRING_NEW_LINE;
+                    switch (this.m_mode) {
+                        case RayCastMode.e_closest:
+                            testbed.g_debugDraw.DrawString(5, this.m_textLine, "Ray-cast mode: closest - find closest fixture along the ray");
+                            break;
+                        case RayCastMode.e_any:
+                            testbed.g_debugDraw.DrawString(5, this.m_textLine, "Ray-cast mode: any - check for obstruction");
+                            break;
+                        case RayCastMode.e_multiple:
+                            testbed.g_debugDraw.DrawString(5, this.m_textLine, "Ray-cast mode: multiple - gather multiple fixtures");
+                            break;
+                    }
+                    this.m_textLine += testbed.DRAW_STRING_NEW_LINE;
+                    const L = 11.0;
+                    const point1 = new b2.Vec2(0.0, 10.0);
+                    const d = new b2.Vec2(L * b2.Cos(this.m_angle), L * b2.Sin(this.m_angle));
+                    const point2 = b2.Vec2.AddVV(point1, d, new b2.Vec2());
+                    if (this.m_mode === RayCastMode.e_closest) {
+                        const callback = new RayCastClosestCallback();
+                        this.m_world.RayCast(callback, point1, point2);
+                        if (callback.m_hit) {
+                            testbed.g_debugDraw.DrawPoint(callback.m_point, 5.0, new b2.Color(0.4, 0.9, 0.4));
+                            testbed.g_debugDraw.DrawSegment(point1, callback.m_point, new b2.Color(0.8, 0.8, 0.8));
+                            const head = b2.Vec2.AddVV(callback.m_point, b2.Vec2.MulSV(0.5, callback.m_normal, b2.Vec2.s_t0), new b2.Vec2());
+                            testbed.g_debugDraw.DrawSegment(callback.m_point, head, new b2.Color(0.9, 0.9, 0.4));
+                        }
+                        else {
+                            testbed.g_debugDraw.DrawSegment(point1, point2, new b2.Color(0.8, 0.8, 0.8));
+                        }
+                    }
+                    else if (this.m_mode === RayCastMode.e_any) {
+                        const callback = new RayCastAnyCallback();
+                        this.m_world.RayCast(callback, point1, point2);
+                        if (callback.m_hit) {
+                            testbed.g_debugDraw.DrawPoint(callback.m_point, 5.0, new b2.Color(0.4, 0.9, 0.4));
+                            testbed.g_debugDraw.DrawSegment(point1, callback.m_point, new b2.Color(0.8, 0.8, 0.8));
+                            const head = b2.Vec2.AddVV(callback.m_point, b2.Vec2.MulSV(0.5, callback.m_normal, b2.Vec2.s_t0), new b2.Vec2());
+                            testbed.g_debugDraw.DrawSegment(callback.m_point, head, new b2.Color(0.9, 0.9, 0.4));
+                        }
+                        else {
+                            testbed.g_debugDraw.DrawSegment(point1, point2, new b2.Color(0.8, 0.8, 0.8));
+                        }
+                    }
+                    else if (this.m_mode === RayCastMode.e_multiple) {
+                        const callback = new RayCastMultipleCallback();
+                        this.m_world.RayCast(callback, point1, point2);
+                        testbed.g_debugDraw.DrawSegment(point1, point2, new b2.Color(0.8, 0.8, 0.8));
+                        for (let i = 0; i < callback.m_count; ++i) {
+                            const p = callback.m_points[i];
+                            const n = callback.m_normals[i];
+                            testbed.g_debugDraw.DrawPoint(p, 5.0, new b2.Color(0.4, 0.9, 0.4));
+                            testbed.g_debugDraw.DrawSegment(point1, p, new b2.Color(0.8, 0.8, 0.8));
+                            const head = b2.Vec2.AddVV(p, b2.Vec2.MulSV(0.5, n, b2.Vec2.s_t0), new b2.Vec2());
+                            testbed.g_debugDraw.DrawSegment(p, head, new b2.Color(0.9, 0.9, 0.4));
+                        }
+                    }
+                    if (advanceRay) {
+                        this.m_angle += 0.25 * b2.pi / 180.0;
+                    }
+                    /*
+                    #if 0
+                      // This case was failing.
+                      {
+                        b2Vec2 vertices[4];
+                        //vertices[0].Set(-22.875f, -3.0f);
+                        //vertices[1].Set(22.875f, -3.0f);
+                        //vertices[2].Set(22.875f, 3.0f);
+                        //vertices[3].Set(-22.875f, 3.0f);
                 
-                };
-                exports_1("Pyramid", Pyramid);
-                exports_1("testIndex", testIndex = testbed.RegisterTest("Stacking", "Microfluidic Biofilm", Pyramid.Create));
-            }
+                        b2PolygonShape shape;
+                        //shape.Set(vertices, 4);
+                        shape.SetAsBox(22.875f, 3.0f);
+                
+                        b2RayCastInput input;
+                        input.p1.Set(10.2725f,1.71372f);
+                        input.p2.Set(10.2353f,2.21807f);
+                        //input.maxFraction = 0.567623f;
+                        input.maxFraction = 0.56762173f;
+                
+                        b2Transform xf;
+                        xf.SetIdentity();
+                        xf.p.Set(23.0f, 5.0f);
+                
+                        b2RayCastOutput output;
+                        bool hit;
+                        hit = shape.RayCast(&output, input, xf);
+                        hit = false;
+                
+                        b2Color color(1.0f, 1.0f, 1.0f);
+                        b2Vec2 vs[4];
+                        for (int32 i = 0; i < 4; ++i)
+                        {
+                          vs[i] = b2Mul(xf, shape.m_vertices[i]);
+                        }
+                
+                        g_debugDraw.DrawPolygon(vs, 4, color);
+                        g_debugDraw.DrawSegment(input.p1, input.p2, color);
+                      }
+                    #endif
+                    */
+                }
+                static Create() {
+                    return new RayCast();
+                }
+            };
+            exports_1("RayCast", RayCast);
+            RayCast.e_maxBodies = 256;
+            exports_1("testIndex", testIndex = testbed.RegisterTest("Collision", "Ray Cast", RayCast.Create));
+        }
     };
 });
+//# sourceMappingURL=ray_cast.js.map

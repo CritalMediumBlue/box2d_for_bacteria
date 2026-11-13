@@ -35,7 +35,7 @@ export class PolygonCollision extends testbed.Test {
     super();
 
     {
-      this.m_polygonA.SetAsBox(0.2, 0.4);
+      this.m_polygonA.SetAsBox(0.8, 0.8);
       this.m_transformA.SetPositionAngle(new b2.Vec2(0.0, 0.0), 0.0);
     }
 
@@ -102,7 +102,7 @@ export class PolygonCollision extends testbed.Test {
     }
 
     for (let i = 0; i < manifold.pointCount; ++i) {
-      testbed.g_debugDraw.DrawPoint(worldManifold.points[i], 4.0, new b2.Color(0.9, 0.3, 0.3));
+      testbed.g_debugDraw.DrawPoint(worldManifold.points[i], 20.0, new b2.Color(0.9, 0.9, 0.3));
     }
 
     super.Step(settings);

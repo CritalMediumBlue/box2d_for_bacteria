@@ -69,52 +69,8 @@ export class Web extends testbed.Test {
       const jd = new b2.DistanceJointDef();
       let p1, p2, d;
 
-      const frequencyHz: number = 2.0;
+      const frequencyHz: number = 0.1;
       const dampingRatio: number = 0.0;
-
-      jd.bodyA = ground;
-      jd.bodyB = body0;
-      b2.LinearStiffness(jd, frequencyHz, dampingRatio, jd.bodyA, jd.bodyB);
-      jd.localAnchorA.Set(-10.0, 0.0);
-      jd.localAnchorB.Set(-0.5, -0.5);
-      p1 = jd.bodyA.GetWorldPoint(jd.localAnchorA, new b2.Vec2());
-      p2 = jd.bodyB.GetWorldPoint(jd.localAnchorB, new b2.Vec2());
-      d = b2.Vec2.SubVV(p2, p1, new b2.Vec2());
-      jd.length = d.Length();
-      this.m_joints[0] = this.m_world.CreateJoint(jd);
-
-      jd.bodyA = ground;
-      jd.bodyB = body1;
-      b2.LinearStiffness(jd, frequencyHz, dampingRatio, jd.bodyA, jd.bodyB);
-      jd.localAnchorA.Set(10.0, 0.0);
-      jd.localAnchorB.Set(0.5, -0.5);
-      p1 = jd.bodyA.GetWorldPoint(jd.localAnchorA, new b2.Vec2());
-      p2 = jd.bodyB.GetWorldPoint(jd.localAnchorB, new b2.Vec2());
-      d = b2.Vec2.SubVV(p2, p1, new b2.Vec2());
-      jd.length = d.Length();
-      this.m_joints[1] = this.m_world.CreateJoint(jd);
-
-      jd.bodyA = ground;
-      jd.bodyB = body2;
-      b2.LinearStiffness(jd, frequencyHz, dampingRatio, jd.bodyA, jd.bodyB);
-      jd.localAnchorA.Set(10.0, 20.0);
-      jd.localAnchorB.Set(0.5, 0.5);
-      p1 = jd.bodyA.GetWorldPoint(jd.localAnchorA, new b2.Vec2());
-      p2 = jd.bodyB.GetWorldPoint(jd.localAnchorB, new b2.Vec2());
-      d = b2.Vec2.SubVV(p2, p1, new b2.Vec2());
-      jd.length = d.Length();
-      this.m_joints[2] = this.m_world.CreateJoint(jd);
-
-      jd.bodyA = ground;
-      jd.bodyB = body3;
-      b2.LinearStiffness(jd, frequencyHz, dampingRatio, jd.bodyA, jd.bodyB);
-      jd.localAnchorA.Set(-10.0, 20.0);
-      jd.localAnchorB.Set(-0.5, 0.5);
-      p1 = jd.bodyA.GetWorldPoint(jd.localAnchorA, new b2.Vec2());
-      p2 = jd.bodyB.GetWorldPoint(jd.localAnchorB, new b2.Vec2());
-      d = b2.Vec2.SubVV(p2, p1, new b2.Vec2());
-      jd.length = d.Length();
-      this.m_joints[3] = this.m_world.CreateJoint(jd);
 
       jd.bodyA = body0;
       jd.bodyB = body1;

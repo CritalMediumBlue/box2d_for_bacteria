@@ -440,7 +440,7 @@ System.register(["@box2d", "./draw.js", "./fullscreen_ui.js", "./particle_parame
                     }
                     // #endif
                     if (this.m_bombSpawning) {
-                        const c = new b2.Color(0, 0, 1); 
+                        const c = new b2.Color(0, 0, 1);
                         draw_js_1.g_debugDraw.DrawPoint(this.m_bombSpawnPoint, 4, c);
                         c.SetRGB(0.8, 0.8, 0.8);
                         draw_js_1.g_debugDraw.DrawSegment(this.m_mouseWorld, this.m_bombSpawnPoint, c);
@@ -592,13 +592,13 @@ System.register(["@box2d", "./draw.js", "./fullscreen_ui.js", "./particle_parame
             Test.PreSolve_s_worldManifold = new b2.WorldManifold();
             // #if B2_ENABLE_PARTICLE
             Test.k_ParticleColors = [
-                new b2.Color().SetByteRGBA(0xff, 0x00, 0x00, 0xff),
-                new b2.Color().SetByteRGBA(0x00, 0xff, 0x00, 0xff),
-                new b2.Color().SetByteRGBA(0x00, 0x00, 0xff, 0xff),
-                new b2.Color().SetByteRGBA(0xff, 0x8c, 0x00, 0xff),
-                new b2.Color().SetByteRGBA(0x00, 0xce, 0xd1, 0xff),
-                new b2.Color().SetByteRGBA(0xff, 0x00, 0xff, 0xff),
-                new b2.Color().SetByteRGBA(0xff, 0xd7, 0x00, 0xff),
+                new b2.Color().SetByteRGBA(0xff, 0x00, 0x00, 0xff), // red
+                new b2.Color().SetByteRGBA(0x00, 0xff, 0x00, 0xff), // green
+                new b2.Color().SetByteRGBA(0x00, 0x00, 0xff, 0xff), // blue
+                new b2.Color().SetByteRGBA(0xff, 0x8c, 0x00, 0xff), // orange
+                new b2.Color().SetByteRGBA(0x00, 0xce, 0xd1, 0xff), // turquoise
+                new b2.Color().SetByteRGBA(0xff, 0x00, 0xff, 0xff), // magenta
+                new b2.Color().SetByteRGBA(0xff, 0xd7, 0x00, 0xff), // gold
                 new b2.Color().SetByteRGBA(0x00, 0xff, 0xff, 0xff), // cyan
             ];
             Test.k_ParticleColorsCount = Test.k_ParticleColors.length;

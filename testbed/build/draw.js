@@ -122,9 +122,9 @@ System.register(["@box2d"], function (exports_1, context_1) {
                             ctx.lineTo(vertices[i].x, vertices[i].y);
                         }
                         ctx.closePath();
-                        ctx.strokeStyle =  color.MakeStyleString(1);
+                        ctx.strokeStyle = color.MakeStyleString(1);
                         ctx.stroke();
-                        ctx.fillStyle =  color.MakeStyleString(1);
+                        ctx.fillStyle = color.MakeStyleString(1);
                         ctx.fill();
                     }
                 }
@@ -146,11 +146,10 @@ System.register(["@box2d"], function (exports_1, context_1) {
                         ctx.arc(cx, cy, radius, 0, b2.pi * 2, true);
                         ctx.moveTo(cx, cy);
                         ctx.lineTo((cx + axis.x * radius), (cy + axis.y * radius));
-                        ctx.strokeStyle =  "black";
+                        ctx.strokeStyle = "black";
                         ctx.stroke();
-                        ctx.fillStyle =  color.MakeStyleString(1);
+                        ctx.fillStyle = color.MakeStyleString(1);
                         ctx.fill();
-                        
                     }
                 }
                 // #if B2_ENABLE_PARTICLE

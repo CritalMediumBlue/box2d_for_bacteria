@@ -16,9 +16,9 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
             CircleStack = class CircleStack extends testbed.Test {
                 constructor() {
                     super();
+                    this.m_bodies = [];
                     //set gravity to 0
                     this.m_world.SetGravity(new b2.Vec2(0.0, 0.0));
-                    this.m_bodies = [];
                     {
                         const bd = new b2.BodyDef();
                         const ground = this.m_world.CreateBody(bd);
@@ -28,7 +28,7 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                     }
                     {
                         const shape = new b2.CircleShape();
-                        shape.m_radius = 1.0/4;
+                        shape.m_radius = 1.0 / 4;
                         for (let i = 0; i < CircleStack.e_count; ++i) {
                             const bd = new b2.BodyDef();
                             bd.type = b2.BodyType.b2_dynamicBody;
@@ -41,6 +41,15 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                 }
                 Step(settings) {
                     super.Step(settings);
+                    // for (let i: number = 0; i < CircleStack.e_count; ++i)
+                    // {
+                    //   printf("%g ", this.m_bodies[i].GetWorldCenter().y);
+                    // }
+                    // for (let i: number = 0; i < CircleStack.e_count; ++i)
+                    // {
+                    //   printf("%g ", this.m_bodies[i].GetLinearVelocity().y);
+                    // }
+                    // printf("\n");
                 }
                 static Create() {
                     return new CircleStack();

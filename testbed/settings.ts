@@ -27,17 +27,17 @@ export class Settings {
   public m_windowWidth: number = 1600;
   public m_windowHeight: number = 900;
   public m_hertz: number = 60;
-  public m_velocityIterations: number = 8;
-  public m_positionIterations: number = 3;
+  public m_velocityIterations: number = 20;
+  public m_positionIterations: number = 20;
   // #if B2_ENABLE_PARTICLE
   // Particle iterations are needed for numerical stability in particle
   // simulations with small particles and relatively high gravity.
   // b2CalculateParticleIterations helps to determine the number.
-  public m_particleIterations: number = b2.CalculateParticleIterations(10, 0.04, 1 / this.m_hertz);
+  public m_particleIterations: number = 10;
   // #endif
   public m_drawShapes: boolean = true;
   // #if B2_ENABLE_PARTICLE
-  public m_drawParticles: boolean = true;
+  public m_drawParticles: boolean = false;
   // #endif
   public m_drawJoints: boolean = true;
   public m_drawAABBs: boolean = false;
@@ -46,13 +46,13 @@ export class Settings {
   public m_drawContactImpulse: boolean = false;
   public m_drawFrictionImpulse: boolean = false;
   public m_drawCOMs: boolean = false;
-  public m_drawControllers: boolean = true;
+  public m_drawControllers: boolean = false;
   public m_drawStats: boolean = false;
   public m_drawProfile: boolean = false;
   public m_enableWarmStarting: boolean = true;
-  public m_enableContinuous: boolean = true;
+  public m_enableContinuous: boolean = false;
   public m_enableSubStepping: boolean = false;
-  public m_enableSleep: boolean = true;
+  public m_enableSleep: boolean = false;
   public m_pause: boolean = false;
   public m_singleStep: boolean = false;
   // #if B2_ENABLE_PARTICLE
@@ -63,9 +63,9 @@ export class Settings {
     this.m_testIndex = 0;
     this.m_windowWidth = 1600;
     this.m_windowHeight = 900;
-    this.m_hertz = 60;
-    this.m_velocityIterations = 8;
-    this.m_positionIterations = 3;
+    this.m_hertz = 4;
+    this.m_velocityIterations = 2;
+    this.m_positionIterations = 2;
     // #if B2_ENABLE_PARTICLE
     // Particle iterations are needed for numerical stability in particle
     // simulations with small particles and relatively high gravity.
@@ -86,12 +86,12 @@ export class Settings {
     // #if B2_ENABLE_CONTROLLER
     this.m_drawControllers = true;
     // #endif
-    this.m_drawStats = false;
-    this.m_drawProfile = false;
+    this.m_drawStats = true;
+    this.m_drawProfile = true;
     this.m_enableWarmStarting = true;
-    this.m_enableContinuous = true;
+    this.m_enableContinuous = false;
     this.m_enableSubStepping = false;
-    this.m_enableSleep = true;
+    this.m_enableSleep = false;
     this.m_pause = false;
     this.m_singleStep = false;
     // #if B2_ENABLE_PARTICLE

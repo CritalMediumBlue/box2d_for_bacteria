@@ -71,7 +71,7 @@ export class Main {
     debug_div.style.zIndex = "256";
     debug_div.innerHTML = "";
 
-    document.body.style.backgroundColor = "rgba(51, 51, 51, 1.0)";
+    document.body.style.backgroundColor = "rgba(255, 255, 255, 1)";
 
     const main_div: HTMLDivElement = document.body.appendChild(document.createElement("div"));
     main_div.style.position = "absolute"; // relative to document.body
@@ -90,7 +90,7 @@ export class Main {
     const title_div: HTMLDivElement = main_div.appendChild(document.createElement("div"));
     title_div.style.textAlign = "center";
     title_div.style.color = "grey";
-    title_div.innerHTML = "Box2D Testbed version " + b2.version.toString();
+    title_div.innerHTML = "Biofilm monolayer simulator " + b2.version.toString();
 
     const view_div: HTMLDivElement = main_div.appendChild(document.createElement("div"));
 
@@ -176,10 +176,10 @@ export class Main {
     }
 
     const number_input_table: HTMLTableElement = controls_div.appendChild(document.createElement("table"));
-    connect_number_input(number_input_table, "Vel Iters", this.m_settings.m_velocityIterations, (value: number): void => { this.m_settings.m_velocityIterations = value; }, 1, 20, 1);
-    connect_number_input(number_input_table, "Pos Iters", this.m_settings.m_positionIterations, (value: number): void => { this.m_settings.m_positionIterations = value; }, 1, 20, 1);
+    connect_number_input(number_input_table, "Veloc Iters", this.m_settings.m_velocityIterations, (value: number): void => { this.m_settings.m_velocityIterations = value; }, 1, 20, 1);
+    connect_number_input(number_input_table, "Posit Iters", this.m_settings.m_positionIterations, (value: number): void => { this.m_settings.m_positionIterations = value; }, 1, 20, 1);
     // #if B2_ENABLE_PARTICLE
-    connect_number_input(number_input_table, "Pcl Iters", this.m_settings.m_particleIterations, (value: number): void => { this.m_settings.m_particleIterations = value; }, 1, 100, 1);
+    connect_number_input(number_input_table, "Parti Iters", this.m_settings.m_particleIterations, (value: number): void => { this.m_settings.m_particleIterations = value; }, 1, 100, 1);
     // #endif
     connect_number_input(number_input_table, "Hertz", this.m_settings.m_hertz, (value: number): void => { this.m_settings.m_hertz = value; }, 10, 120, 1);
 
@@ -209,9 +209,9 @@ export class Main {
     const draw_fieldset: HTMLFieldSetElement = controls_div.appendChild(document.createElement("fieldset"));
     const draw_legend: HTMLLegendElement = draw_fieldset.appendChild(document.createElement("legend"));
     draw_legend.appendChild(document.createTextNode("Draw"));
-    connect_checkbox_input(draw_fieldset, "Shapes", this.m_settings.m_drawShapes, (value: boolean): void => { this.m_settings.m_drawShapes = value; });
+    connect_checkbox_input(draw_fieldset, "Bacteria", this.m_settings.m_drawShapes, (value: boolean): void => { this.m_settings.m_drawShapes = value; });
     // #if B2_ENABLE_PARTICLE
-    connect_checkbox_input(draw_fieldset, "Particles", this.m_settings.m_drawParticles, (value: boolean): void => { this.m_settings.m_drawParticles = value; });
+    connect_checkbox_input(draw_fieldset, "Matrix", this.m_settings.m_drawParticles, (value: boolean): void => { this.m_settings.m_drawParticles = value; });
     // #endif
     connect_checkbox_input(draw_fieldset, "Joints", this.m_settings.m_drawJoints, (value: boolean): void => { this.m_settings.m_drawJoints = value; });
     connect_checkbox_input(draw_fieldset, "AABBs", this.m_settings.m_drawAABBs, (value: boolean): void => { this.m_settings.m_drawAABBs = value; });
@@ -681,7 +681,7 @@ import "./tests/polygon_shapes.js";
 import "./tests/prismatic_joint.js";
 import "./tests/pulley_joint.js";
 import "./tests/pyramid.js";
-import "./tests/ray_cast.js";
+import "./tests/microfluidic_biofilm.js"; // replaces the stock Ray Cast test
 import "./tests/restitution.js";
 import "./tests/revolute_joint.js";
 import "./tests/rope.js";
@@ -736,4 +736,5 @@ import "./tests/particles/soup_stirrer.js";
 import "./tests/particles/soup.js";
 import "./tests/particles/sparky.js";
 import "./tests/particles/wave_machine.js";
+
 // #endif

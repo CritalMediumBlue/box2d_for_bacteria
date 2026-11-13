@@ -148,10 +148,10 @@ export class DebugDraw extends b2.Draw {
         ctx.lineTo(vertices[i].x, vertices[i].y);
       }
       ctx.closePath();
-      ctx.fillStyle = color.MakeStyleString(0.5);
-      ctx.fill();
       ctx.strokeStyle = color.MakeStyleString(1);
       ctx.stroke();
+      ctx.fillStyle = color.MakeStyleString(1);
+      ctx.fill();
     }
   }
 
@@ -174,10 +174,10 @@ export class DebugDraw extends b2.Draw {
       ctx.arc(cx, cy, radius, 0, b2.pi * 2, true);
       ctx.moveTo(cx, cy);
       ctx.lineTo((cx + axis.x * radius), (cy + axis.y * radius));
-      ctx.fillStyle = color.MakeStyleString(0.5);
-      ctx.fill();
-      ctx.strokeStyle = color.MakeStyleString(1);
+      ctx.strokeStyle = "black";
       ctx.stroke();
+      ctx.fillStyle = color.MakeStyleString(1);
+      ctx.fill();
     }
   }
 

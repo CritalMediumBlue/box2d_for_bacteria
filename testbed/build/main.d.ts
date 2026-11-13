@@ -88,7 +88,7 @@ import "./tests/polygon_shapes.js";
 import "./tests/prismatic_joint.js";
 import "./tests/pulley_joint.js";
 import "./tests/pyramid.js";
-import "./tests/ray_cast.js";
+import "./tests/microfluidic_biofilm.js";
 import "./tests/restitution.js";
 import "./tests/revolute_joint.js";
 import "./tests/rope.js";

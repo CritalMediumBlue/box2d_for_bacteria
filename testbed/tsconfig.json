@@ -10,6 +10,8 @@
     "outDir": "./build",
     "declaration": true,
     "sourceMap": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
       "@box2d": [ "../build/index" ],

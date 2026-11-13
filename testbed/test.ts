@@ -163,7 +163,7 @@ export class Test extends b2.ContactListener {
     // #if B2_ENABLE_PARTICLE
     const particleSystemDef = new b2.ParticleSystemDef();
     // #endif
-    const gravity: b2.Vec2 = new b2.Vec2(0, -10);
+    const gravity: b2.Vec2 = new b2.Vec2(0, -1);
     this.m_world = new b2.World(gravity);
     // #if B2_ENABLE_PARTICLE
     this.m_particleSystem = this.m_world.CreateParticleSystem(particleSystemDef);

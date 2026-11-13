@@ -48,7 +48,6 @@ System.register(["@box2d", "@testbed"], function (exports_1, context_1) {
                         let p1, p2, d;
                         const frequencyHz = 0.1;
                         const dampingRatio = 0.0;
-                       
                         jd.bodyA = body0;
                         jd.bodyB = body1;
                         b2.LinearStiffness(jd, frequencyHz, dampingRatio, jd.bodyA, jd.bodyB);
