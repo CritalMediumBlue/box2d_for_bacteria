@@ -20,6 +20,7 @@ export const RENDER_STYLES: RenderStyle[] = ["phase", "fluorescence", "diagnosti
 
 /** World area to fit on screen. */
 export const VIEW = { minX: -55, maxX: 55, minY: 133, maxY: 205 };
+export interface ViewRect { minX: number; maxX: number; minY: number; maxY: number; }
 
 /** The chamber cavity (inside the walls) and the feeding channel it opens into. */
 const CHAMBER_BOX = { minX: -50, maxX: 50, minY: 140, maxY: 200 };
@@ -28,6 +29,8 @@ const SHADES = 4;
 export interface RenderOptions {
   style: RenderStyle;
   radius: number;
+  /** World area to show (default VIEW: the whole chamber). */
+  view?: ViewRect;
   /** Diagnostic style: pairs of cell indices (forEachCell order) and their penetration depths. */
   overlaps?: { i: Int32Array, j: Int32Array, depth: Float64Array, count: number };
   /** Diagnostic style: depth drawn in red (others orange). */
@@ -59,9 +62,10 @@ export class ChamberRenderer {
     const ctx = this.ctx, canvas = ctx.canvas;
     this.gather(sim);
 
-    // World -> screen: fit VIEW, y pointing up
-    const scale = Math.min(canvas.width / (VIEW.maxX - VIEW.minX), canvas.height / (VIEW.maxY - VIEW.minY));
-    const cx = (VIEW.minX + VIEW.maxX) / 2, cy = (VIEW.minY + VIEW.maxY) / 2;
+    // World -> screen: fit the view, y pointing up
+    const v = options.view ?? VIEW;
+    const scale = Math.min(canvas.width / (v.maxX - v.minX), canvas.height / (v.maxY - v.minY));
+    const cx = (v.minX + v.maxX) / 2, cy = (v.minY + v.maxY) / 2;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";

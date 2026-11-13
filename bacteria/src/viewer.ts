@@ -2,7 +2,8 @@
  * Browser viewer: runs the simulation, draws it (render.ts), measures overlaps, and saves states.
  *
  * URL parameters (all optional): engine=rapier|box2d, seed=N, style=phase|fluorescence|diagnostic,
- * speed=steps per frame, and any simulation parameter by name (e.g. snapshotInterval=600).
+ * speed=steps per frame, view=minX,minY,maxX,maxY (zoom into a world area, e.g. view=-50,185,-35,200 for
+ * the top-left corner), and any simulation parameter by name (e.g. snapshotInterval=600).
  *
  * Saving ("J" or the button): in Chrome/Edge you pick a file once; it is written immediately and
  * overwritten automatically every AUTO_SAVE_EVERY_SNAPSHOTS snapshots. Without a picked file
@@ -15,7 +16,7 @@
 import { DEFAULT_ENGINE, createSimulation, isEngine } from "./engines.js";
 import { DEFAULT_PARAMS, Engine, Simulation, SimulationParams } from "./model.js";
 import { OVERLAP_TARGET_FRACTION, OVERLAP_WARMUP_STEPS, OverlapMeter, OverlapStats } from "./overlap.js";
-import { ChamberRenderer, RENDER_STYLES, RenderStyle } from "./render.js";
+import { ChamberRenderer, RENDER_STYLES, RenderStyle, ViewRect } from "./render.js";
 
 const AUTO_SAVE_EVERY_SNAPSHOTS = 500;
 /** Diagnostic view: overlaps deeper than this fraction of the cell width are highlighted. */
@@ -56,6 +57,9 @@ styleSelect.value = urlStyle && RENDER_STYLES.includes(urlStyle) ? urlStyle : "p
 if (query.get("seed")) { seedInput.value = query.get("seed")!; }
 if (query.get("speed")) { speedInput.value = query.get("speed")!; }
 snapshotInput.value = String(urlOverrides.snapshotInterval ?? DEFAULT_PARAMS.snapshotInterval);
+const viewParts = (query.get("view") ?? "").split(",").map(Number);
+let view: ViewRect | undefined = viewParts.length === 4 && viewParts.every(Number.isFinite) && viewParts[0] < viewParts[2] && viewParts[1] < viewParts[3]
+  ? { minX: viewParts[0], minY: viewParts[1], maxX: viewParts[2], maxY: viewParts[3] } : undefined;
 
 // ---------------------------------------------------------------- state
 
@@ -144,7 +148,7 @@ function render(): void {
       pairs.i[pairs.count] = i; pairs.j[pairs.count] = j; pairs.depth[pairs.count] = depth; pairs.count++;
     });
   }
-  renderer.draw(sim, { style, radius, overlaps: style === "diagnostic" ? pairs : undefined, targetDepth });
+  renderer.draw(sim, { style, radius, view, overlaps: style === "diagnostic" ? pairs : undefined, targetDepth });
 
   statusEl.textContent =
     `step ${sim.stepCount} · ${sim.cellCount} cells · ${sim.states.snapshotCount} snapshots · ` +
@@ -266,6 +270,8 @@ window.addEventListener("beforeunload", (e) => {
   pause: () => { if (!paused) { togglePause(); } },
   resume: () => { if (paused) { togglePause(); } },
   advance,
+  /** Zoom into a world area ({minX, minY, maxX, maxY}), or the whole chamber with no argument. */
+  setView: (rect?: ViewRect) => { view = rect; },
 };
 
 void startSimulation().then(() => requestAnimationFrame(frame));
