@@ -53,6 +53,9 @@ interface Anchor {
   /** The cell it holds and the spring, until that cell divides or is removed. */
   cell: Cell | null;
   joint: ImpulseJoint | null;
+  /** Spring constants (kept to recreate the spring when the world is rebuilt). */
+  stiffness: number;
+  damping: number;
 }
 
 /** Wall thickness. Walls are solid boxes rather than Box2D's zero-thickness edges (see NOTES.md). */
@@ -61,7 +64,7 @@ const WALL_THICKNESS = 2;
 export class RapierSimulation implements Simulation {
   public readonly engine = "rapier";
   public readonly params: SimulationParams;
-  public readonly world: World;
+  public world: World;
   public readonly states: StateRecorder = new StateRecorder();
   public stepCount: number = 0;
 
@@ -79,14 +82,7 @@ export class RapierSimulation implements Simulation {
       throw new Error(`rapierSubsteps must be a positive integer (got ${p.rapierSubsteps})`);
     }
     this.rng = mulberry32(p.seed);
-
-    this.world = new RAPIER.World({ x: 0, y: 0 });
-    this.world.timestep = 1 / (p.hertz * p.rapierSubsteps);
-    this.world.numSolverIterations = p.rapierSolverIterations;
-    this.world.numInternalPgsIterations = p.rapierPgsIterations;
-    if (p.rapierContactFrequency > 0) {
-      this.world.integrationParameters.contact_natural_frequency = p.rapierContactFrequency;
-    }
+    this.world = this.createWorld();
 
     for (let i = 0; i < p.initialCells; ++i) {
       const x = this.rng() * (p.maxX - p.minX) + p.minX;
@@ -100,6 +96,51 @@ export class RapierSimulation implements Simulation {
 
   public get cellCount(): number {
     return this.cells.length;
+  }
+
+  private createWorld(): World {
+    const p = this.params;
+    const world = new RAPIER.World({ x: 0, y: 0 });
+    world.timestep = 1 / (p.hertz * p.rapierSubsteps);
+    world.numSolverIterations = p.rapierSolverIterations;
+    world.numInternalPgsIterations = p.rapierPgsIterations;
+    if (p.rapierContactFrequency > 0) {
+      world.integrationParameters.contact_natural_frequency = p.rapierContactFrequency;
+    }
+    return world;
+  }
+
+  /**
+   * Move everything into a fresh Rapier world and free the old one: same walls, and every cell
+   * and anchor with its exact position, angle, velocities, mass, collider and spring. Used every
+   * rapierRebuildInterval steps to give back the memory Rapier 0.21 leaks when colliders are
+   * replaced (see resizeCollider). Contact caches start fresh, as after any collider replacement.
+   */
+  private rebuildWorld(): void {
+    const old = this.world;
+    this.world = this.createWorld();
+    for (const cell of this.cells) {
+      const t = cell.body.translation(), v = cell.body.linvel();
+      const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(t.x, t.y)
+        .setRotation(cell.body.rotation())
+        .setLinvel(v.x, v.y)
+        .setAngvel(cell.body.angvel())
+        .setCanSleep(false)
+        .setAdditionalMassProperties(cell.mass, this.zero, cell.inertia));
+      cell.body = body;
+      cell.collider = this.world.createCollider(this.cellColliderDesc(cell.length, cell.sqrtFriction)
+        .setRotation(cell.flipped ? Math.PI : 0), body);
+    }
+    this.createWalls();
+    for (const anchor of this.anchors) {
+      anchor.body = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(anchor.x, anchor.y));
+      if (anchor.cell) {
+        const data = RAPIER.JointData.spring(0, anchor.stiffness, anchor.damping, this.zero, this.zero);
+        anchor.joint = this.world.createImpulseJoint(data, anchor.cell.body, anchor.body, true);
+      }
+    }
+    old.free();
   }
 
   public step(): boolean {
@@ -134,6 +175,10 @@ export class RapierSimulation implements Simulation {
       }
     }
     this.anchors.length = kept;
+
+    if (p.rapierRefreshContacts === 1 && p.rapierRebuildInterval > 0 && this.stepCount % p.rapierRebuildInterval === 0) {
+      this.rebuildWorld();
+    }
 
     if (this.stepCount % p.snapshotInterval === 0) {
       this.takeSnapshot();
@@ -273,20 +318,29 @@ export class RapierSimulation implements Simulation {
    * Rapier (0.21) keeps a contact's points from step to step as long as the two colliders hardly
    * move relative to each other, and does not recompute them when a collider's shape changes
    * (setHalfHeight / setShape). A cell at rest, e.g. in a packed colony, then grows straight into
-   * its neighbours and the walls with the contact still reporting zero depth.
-   *
-   * Fix (rapierRefreshContacts = 1): after resizing, turn the collider by π on its body. A capsule
-   * is symmetric, so the shape in the world is unchanged (and the body's angle is untouched), but
-   * every cached contact point moves to the opposite side of the collider's frame, so Rapier
-   * computes all of its contacts afresh. (Replacing the collider also works, but leaks WebAssembly
-   * memory in Rapier 0.21 until the heap is exhausted after ~230 000 steps.)
-   * rapierRefreshContacts = 0 resizes only (to show the effect; see NOTES.md).
+   * its neighbours and the walls with the contact still reporting zero depth. rapierRefreshContacts:
+   *  - 1 (default): replace the collider, which gives the cell fresh contacts. Rapier leaks some
+   *    WebAssembly memory per replaced collider that touches others (the 4 GB heap ran out after
+   *    ~230 000 steps), so the whole world is rebuilt every rapierRebuildInterval steps, which
+   *    returns that memory.
+   *  - 2: resize in place, then turn the collider by π on its body: the same capsule in the world,
+   *    no allocation, and most contacts are recomputed, but some between two cells that both turned
+   *    are not (more overlap excursions; see NOTES.md).
+   *  - 0: resize in place only (stale contacts; to show the effect).
    */
   private resizeCollider(cell: Cell): void {
-    cell.collider.setHalfHeight(cell.length / 2);
-    if (this.params.rapierRefreshContacts) {
-      cell.flipped = !cell.flipped;
-      cell.collider.setRotationWrtParent(cell.flipped ? Math.PI : 0);
+    switch (this.params.rapierRefreshContacts) {
+      case 1:
+        this.world.removeCollider(cell.collider, false);
+        cell.collider = this.world.createCollider(this.cellColliderDesc(cell.length, cell.sqrtFriction), cell.body);
+        break;
+      case 2:
+        cell.collider.setHalfHeight(cell.length / 2);
+        cell.flipped = !cell.flipped;
+        cell.collider.setRotationWrtParent(cell.flipped ? Math.PI : 0);
+        break;
+      default:
+        cell.collider.setHalfHeight(cell.length / 2);
     }
   }
 
@@ -307,7 +361,7 @@ export class RapierSimulation implements Simulation {
     cell.length = length;
     cell.sqrtFriction = Math.sqrt(friction);
     cell.collider.setFriction(cell.sqrtFriction);
-    this.resizeCollider(cell); // new length, fresh contacts
+    this.resizeCollider(cell); // new length (and friction), fresh contacts
     cell.color = color;
     cell.growthRate = 1 + p.rate;
     cell.id = this.nextId++;
@@ -318,12 +372,14 @@ export class RapierSimulation implements Simulation {
   private createAnchor(x: number, y: number, cell: Cell | null): void {
     const p = this.params;
     const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x, y));
-    const anchor: Anchor = { body, x, y, createdAtStep: this.stepCount, cell, joint: null };
+    const anchor: Anchor = { body, x, y, createdAtStep: this.stepCount, cell, joint: null, stiffness: 0, damping: 0 };
     if (cell) {
       // Box2D's LinearStiffness for a cell held by a static body: stiffness m·ω², damping 2·m·ζ·ω
       const mass = cell.body.mass();
       const omega = 2 * Math.PI * p.anchorFrequencyHz;
-      const data = RAPIER.JointData.spring(0, mass * omega * omega, 2 * mass * p.anchorDampingRatio * omega, this.zero, this.zero);
+      anchor.stiffness = mass * omega * omega;
+      anchor.damping = 2 * mass * p.anchorDampingRatio * omega;
+      const data = RAPIER.JointData.spring(0, anchor.stiffness, anchor.damping, this.zero, this.zero);
       anchor.joint = this.world.createImpulseJoint(data, cell.body, body, true);
       cell.anchors.push(anchor);
     }

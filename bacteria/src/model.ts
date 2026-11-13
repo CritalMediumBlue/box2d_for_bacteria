@@ -25,7 +25,10 @@ export const DEFAULT_PARAMS = {
   rapierSolverIterations: 12, // Rapier's default: 4
   rapierPgsIterations: 1, // Rapier's default
   rapierContactFrequency: 720, // contact stiffness (natural frequency, Hz); 0 = Rapier's default (30)
-  rapierRefreshContacts: 1, // 1: make Rapier recompute a cell's contacts when it grows (see resizeCollider in rapier-simulation.ts)
+  // How a growing cell gets fresh contacts (Rapier keeps stale ones otherwise; see resizeCollider in
+  // rapier-simulation.ts): 1 = replace its collider, 2 = turn it by pi, 0 = nothing
+  rapierRefreshContacts: 1,
+  rapierRebuildInterval: 10000, // with rapierRefreshContacts = 1: rebuild the Rapier world every N steps (0 = never)
 
   // --- chamber ---
   minX: -50, maxX: 50, // cells leaving this range are removed
