@@ -600,6 +600,8 @@ export class b2World {
           } else if (!b.IsAwake()) {
             color.SetRGB(0.6, 0.6, 0.6);
             this.DrawShape(f, color);
+          } else if (b.myCustomColor) {
+            this.DrawShape(f, b.myCustomColor);
           } else {
             color.SetRGB(0.9, 0.7, 0.7);
             this.DrawShape(f, color);

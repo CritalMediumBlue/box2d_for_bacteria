@@ -4,6 +4,7 @@ import { b2ContactEdge } from "./b2_contact.js";
 import { b2JointEdge } from "./b2_joint.js";
 import { b2Fixture, b2IFixtureDef } from "./b2_fixture.js";
 import { b2World } from "./b2_world.js";
+import type { b2Color } from "../common/b2_draw.js";
 import { b2ControllerEdge } from "../controllers/b2_controller.js";
 export declare enum b2BodyType {
     b2_unknown = -1,
@@ -76,6 +77,7 @@ export declare class b2Body {
     m_gravityScale: number;
     m_sleepTime: number;
     m_userData: any;
+    myCustomColor?: b2Color;
     m_controllerList: b2ControllerEdge | null;
     m_controllerCount: number;
     constructor(bd: b2IBodyDef, world: b2World);

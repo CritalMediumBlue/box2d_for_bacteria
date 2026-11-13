@@ -25,6 +25,7 @@ import { b2ContactEdge } from "./b2_contact.js";
 import { b2JointEdge } from "./b2_joint.js";
 import { b2Fixture, b2FixtureDef, b2IFixtureDef } from "./b2_fixture.js";
 import { b2World } from "./b2_world.js";
+import type { b2Color } from "../common/b2_draw.js";
 // #if B2_ENABLE_CONTROLLER
 import { b2ControllerEdge } from "../controllers/b2_controller.js";
 // #endif
@@ -205,6 +206,9 @@ export class b2Body {
   public m_sleepTime: number = 0;
 
   public m_userData: any = null;
+
+  // Bacteria simulation: if set, b2World.DebugDraw draws this body's shapes in this color.
+  public myCustomColor?: b2Color;
 
   // #if B2_ENABLE_CONTROLLER
   public m_controllerList: b2ControllerEdge | null = null;
