@@ -118,10 +118,15 @@ export class Box2DSimulation implements Simulation {
       }
     }
 
-    // Remove expired anchors (destroying the anchor body also removes its joint)
+    // Remove expired anchors, and with anchorMaxStretch those pulled too far (destroying the anchor
+    // body also removes its joint)
     for (let b = this.world.GetBodyList(); b; b = b.GetNext()) {
       const userData = b.GetUserData();
-      if (userData && this.stepCount - userData.anchorCreatedAtStep >= p.anchorLifetimeSteps) {
+      if (!userData) { continue; }
+      const edge = b.GetJointList();
+      const overStretched = p.anchorMaxStretch > 0 && edge !== null &&
+        b2.Vec2.DistanceVV(b.GetPosition(), edge.other.GetPosition()) > p.anchorMaxStretch;
+      if (this.stepCount - userData.anchorCreatedAtStep >= p.anchorLifetimeSteps || overStretched) {
         this.world.DestroyBody(b);
       }
     }

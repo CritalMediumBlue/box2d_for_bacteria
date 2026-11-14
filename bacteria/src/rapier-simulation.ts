@@ -164,10 +164,11 @@ export class RapierSimulation implements Simulation {
     }
     this.cells.length = kept;
 
-    // Remove expired anchors (removing the anchor body also removes its spring)
+    // Remove expired anchors, and with anchorMaxStretch those pulled too far (removing the anchor
+    // body also removes its spring)
     kept = 0;
     for (const anchor of this.anchors) {
-      if (this.stepCount - anchor.createdAtStep >= p.anchorLifetimeSteps) {
+      if (this.stepCount - anchor.createdAtStep >= p.anchorLifetimeSteps || this.overStretched(anchor)) {
         if (anchor.cell) { anchor.cell.anchors.splice(anchor.cell.anchors.indexOf(anchor), 1); }
         this.world.removeRigidBody(anchor.body);
       } else {
@@ -185,6 +186,13 @@ export class RapierSimulation implements Simulation {
       return true;
     }
     return false;
+  }
+
+  private overStretched(anchor: Anchor): boolean {
+    const max = this.params.anchorMaxStretch;
+    if (max <= 0 || !anchor.cell) { return false; }
+    const t = anchor.cell.body.translation();
+    return Math.hypot(t.x - anchor.x, t.y - anchor.y) > max;
   }
 
   public forEachCell(fn: (x: number, y: number, angle: number, length: number, color: RGB, id: number) => void): void {
