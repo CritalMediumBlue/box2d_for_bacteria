@@ -168,24 +168,26 @@ anchors that never let go the median was 12–15%.
 ## Browser screenshots
 
 A 60 000-step session in headless Chrome with the final defaults (`index.html?seed=7`, 200 steps
-per frame; the page confirmed `anchorMaxStretch=2`), paused every ~6000 steps for screenshots:
-the whole chamber in the phase-contrast and diagnostic views, and diagnostic close-ups (~18 × 11
-units) around the deepest pair at the last snapshot and of the top-left corner. In the diagnostic
-view each cell has its true capsule outline, and anchors are black squares with a line to their
-cell. Pairs deeper than 1% of the width are drawn orange, deeper than the target red. At the
-close-up zoom one pixel is ~0.013 units, so a 5% overlap (0.04) would show as ~3 pixels of
-outline crossing a neighbour.
+per frame; the page confirmed `anchorMaxStretch=2`, `growthGroups=5`, `continuousDrag=1`, 8
+iterations), paused every ~6000 steps for screenshots. Each pause took the whole chamber in the
+phase-contrast and diagnostic views, plus diagnostic close-ups (~18 × 11 units) around the
+deepest pair at the last snapshot and of the top-left corner. In the diagnostic view each cell has
+its true capsule outline, and anchors are black squares with a line to their cell. Pairs deeper
+than 1% of the width are drawn orange, deeper than the target (8%) red. At the close-up zoom one
+pixel is ~0.013 units, so a 5% overlap (0.04) would show as ~3 pixels of outline crossing a
+neighbour.
 
 Readouts at each pause (overlap at the last snapshot; `screenshots/browser-session.log`): max
-0.81–1.74% at every pause from step 6400 to 60 400; mean 0.16–0.21%; deepest wall contact
-0.4–16%. There were no red pairs and no page errors, and the images show no visible overlap. The
-anchor lines are now all short (≤ 2 units). The session also downloaded the states through the
-page's own `download()`: 17.7 MB, 206 snapshots, 10 942 cell ids, valid `LowRes.json`.
+0.41–1.38% at every pause from step 6400 to 60 200; mean 0.06–0.09%; deepest wall contact
+0.3–5%. There were no red pairs and no page errors, and the images show no visible overlap. The
+session also downloaded the states through the page's own `download()`: 17.6 MB, 205 snapshots,
+10 834 cell ids, valid `LowRes.json`. In the page, physics took 10.5 ms per step at ~1710 cells,
+measured with other runs sharing the CPU.
 
 | | |
 |---|---|
 | ![phase, step 12 200](screenshots/step-012200-phase.jpg) | ![diagnostic, step 12 200](screenshots/step-012200-diagnostic.jpg) |
-| ![phase, step 60 400](screenshots/step-060400-phase.jpg) | ![diagnostic, step 60 400](screenshots/step-060400-diagnostic.jpg) |
-| ![close-up around the deepest pair, step 24 400](screenshots/step-024400-zoom-deepest.jpg) | ![close-up of the top-left corner, step 36 400](screenshots/step-036400-zoom-corner.jpg) |
-| ![close-up around the deepest pair, step 60 400](screenshots/step-060400-zoom-deepest.jpg) | ![close-up of the top-left corner, step 60 400](screenshots/step-060400-zoom-corner.jpg) |
+| ![phase, step 60 200](screenshots/step-060200-phase.jpg) | ![diagnostic, step 60 200](screenshots/step-060200-diagnostic.jpg) |
+| ![close-up around the deepest pair (1.4%), step 30 200](screenshots/step-030200-zoom-deepest.jpg) | ![close-up of the top-left corner, step 36 200](screenshots/step-036200-zoom-corner.jpg) |
+| ![close-up around the deepest pair, step 60 200](screenshots/step-060200-zoom-deepest.jpg) | ![close-up of the top-left corner, step 60 200](screenshots/step-060200-zoom-corner.jpg) |
 | ![fluorescence view, step 24 000](screenshots/step-024000-fluorescence.jpg) | ![the page with controls and overlap readout](screenshots/step-024000-fluorescence-page.jpg) |

@@ -1,15 +1,15 @@
-params: anchorMaxStretch=2 engine=rapier seed=7
-step 6400 cells 1040 overlap(step 6300) max 0.81% at (-28.4,190.2) mean 0.205% wall 0.44% | 246 steps/s, 1 fps, elapsed 17s
-step 12200 cells 1745 overlap(step 12000) max 1.65% at (-41.4,159.6) mean 0.165% wall 0.55% | 112 steps/s, 1 fps, elapsed 57s
-step 18400 cells 1617 overlap(step 18300) max 0.99% at (-16.9,177.3) mean 0.185% wall 3.01% | 86 steps/s, 0 fps, elapsed 132s
-step 24400 cells 1748 overlap(step 24300) max 1.74% at (-32.2,173.7) mean 0.170% wall 2.21% | 78 steps/s, 0 fps, elapsed 211s
-step 30200 cells 1720 overlap(step 30000) max 0.94% at (-24.8,186.9) mean 0.169% wall 5.18% | 82 steps/s, 0 fps, elapsed 290s
-step 36400 cells 1716 overlap(step 36300) max 1.07% at (2.7,172.5) mean 0.170% wall 16.07% | 78 steps/s, 0 fps, elapsed 373s
-step 42400 cells 1751 overlap(step 42300) max 1.50% at (-12.3,144.6) mean 0.166% wall 5.75% | 76 steps/s, 0 fps, elapsed 456s
-step 48400 cells 1727 overlap(step 48300) max 1.48% at (-18.8,156.9) mean 0.159% wall 13.74% | 76 steps/s, 0 fps, elapsed 539s
-step 54200 cells 1737 overlap(step 54000) max 0.91% at (47.0,147.3) mean 0.167% wall 3.41% | 77 steps/s, 0 fps, elapsed 619s
-step 60400 cells 1758 overlap(step 60300) max 1.00% at (-31.5,172.2) mean 0.161% wall 9.41% | 76 steps/s, 0 fps, elapsed 705s
-speed 1 steps/frame: 1756 cells, 16.7 fps, 17 steps/s, step 13.4 ms + draw 0.8 ms per frame
-speed 4 steps/frame: 1756 cells, 10.1 fps, 40 steps/s, step 52.5 ms + draw 0.9 ms per frame
-speed 10 steps/frame: 1749 cells, 5.7 fps, 57 steps/s, step 129.9 ms + draw 0.8 ms per frame
-downloaded: /tmp/claude-1000/-workspace/8c5280e2-e749-4bc6-baaa-842281daca2a/scratchpad/browser-s2/browser-states.json
+params: {"a":2,"g":5,"d":1,"it":8} engine=rapier seed=7
+step 6400 cells 1045 overlap(step 6300) max 0.41% at (41.3,140.3) mean 0.089% wall 0.37% | 283 steps/s, 1 fps, elapsed 14s
+step 12200 cells 1753 overlap(step 12000) max 0.52% at (-15.0,155.3) mean 0.064% wall 0.29% | 127 steps/s, 1 fps, elapsed 50s
+step 18200 cells 1601 overlap(step 18000) max 0.77% at (-42.7,180.4) mean 0.064% wall 2.56% | 111 steps/s, 1 fps, elapsed 109s
+step 24400 cells 1722 overlap(step 24300) max 0.81% at (-40.0,159.8) mean 0.062% wall 3.36% | 102 steps/s, 1 fps, elapsed 172s
+step 30200 cells 1732 overlap(step 30000) max 1.38% at (45.0,175.9) mean 0.069% wall 3.23% | 106 steps/s, 1 fps, elapsed 234s
+step 36200 cells 1723 overlap(step 36000) max 0.97% at (-8.1,158.0) mean 0.069% wall 2.44% | 104 steps/s, 1 fps, elapsed 298s
+step 42400 cells 1744 overlap(step 42300) max 0.92% at (44.6,167.9) mean 0.066% wall 5.03% | 99 steps/s, 0 fps, elapsed 365s
+step 48200 cells 1738 overlap(step 48000) max 1.06% at (-5.5,190.7) mean 0.078% wall 3.00% | 97 steps/s, 0 fps, elapsed 429s
+step 54200 cells 1772 overlap(step 54000) max 0.89% at (38.7,161.3) mean 0.076% wall 4.64% | 95 steps/s, 0 fps, elapsed 495s
+step 60200 cells 1744 overlap(step 60000) max 0.82% at (16.4,143.9) mean 0.074% wall 4.81% | 100 steps/s, 1 fps, elapsed 563s
+speed 1 steps/frame: 1714 cells, 17.2 fps, 17 steps/s, step 10.5 ms + draw 0.9 ms per frame
+speed 4 steps/frame: 1711 cells, 11.4 fps, 46 steps/s, step 40.2 ms + draw 0.9 ms per frame
+speed 10 steps/frame: 1714 cells, 6.8 fps, 68 steps/s, step 100.2 ms + draw 0.9 ms per frame
+downloaded: /tmp/claude-1000/-workspace/8c5280e2-e749-4bc6-baaa-842281daca2a/scratchpad/browser-s3/browser-states.json
