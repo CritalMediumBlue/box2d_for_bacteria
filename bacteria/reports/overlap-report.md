@@ -109,7 +109,7 @@ All Rapier rows here ran with anchors that never let go; compare them with the f
 | Rapier, 8 it., 480 Hz (no rebuild) | 6 / 3 / 9 of 391 | 13.6% | 1.3–1.5% | 0.21% | 1.3% |
 | Rapier, Rapier's own solver defaults (4 it., 30 Hz), before the other fixes, seed 7, 30 000 steps | 62 / 91 | 100% | 15.6% | 1.7% | 27% |
 | **Box2D**, anchors never let go, seed 7, 30 000 steps | **86 / 91** | 100% | 38.8% | 6.8% | 100% |
-<!-- BOX2D -->
+| **Box2D**, final defaults (anchors let go at 2 units), seed 7, 30 000 steps | **87 / 91** | 100% | 31.0% | 6.7% | 100% |
 
 ¹ a pair that crossed at the random start and separated only after the warm-up.
 

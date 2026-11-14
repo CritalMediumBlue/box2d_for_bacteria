@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.25">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>overlap-report</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="overlap-report_files/libs/clipboard/clipboard.min.js"></script>
+<script src="overlap-report_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="overlap-report_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="overlap-report_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="overlap-report_files/libs/quarto-html/popper.min.js"></script>
+<script src="overlap-report_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="overlap-report_files/libs/quarto-html/anchor.min.js"></script>
+<link href="overlap-report_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="overlap-report_files/libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="overlap-report_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="overlap-report_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="overlap-report_files/libs/bootstrap/bootstrap-433350e58c39ee097c4dc605c632e682.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+
+
+
+<section id="overlap-report-rapier-port" class="level1">
+<h1>Overlap report: Rapier port</h1>
+<p><strong>Summary.</strong> With the final defaults, including anchors that let go of cells dragged more than 2 units away (<code>anchorMaxStretch=2</code>, adopted on 14 November), the deepest cell–cell penetration stayed below the target of 5% of the cell width at <strong>every</strong> snapshot of the 3-seed × 120 000-step validation (0 of 1173 over; worst 3.4%). A typical full-chamber snapshot (~1740 cells, ~2700 touching pairs) has its deepest pair at ~1% of the width and a mean of 0.17%. <!-- SUMMARY-LONGRUN -->With anchors that never let go (the testbed’s behaviour), 1% of snapshots had a single pair over the target, up to 20.8%; the stretched anchor springs caused those. Box2D, measured the same way, is over the target in 86 of 91 snapshots.</p>
+<section id="what-is-measured" class="level2">
+<h2 class="anchored" data-anchor-id="what-is-measured">What is measured</h2>
+<p>At every snapshot (every 300 steps) the runner measures, on the live simulation at full precision:</p>
+<ul>
+<li><strong>cell–cell penetration depth</strong> for every pair of touching cells. Each cell is a capsule: the segment between its end-cap centres, swept by the radius. Two cells overlap by <code>2·radius − distance(axis₁, axis₂)</code> when that is positive. Pairs are found with a uniform grid (cell size = longest cell + 2·radius), so every touching pair is tested exactly once.</li>
+<li>per snapshot: the <strong>max</strong>, the <strong>mean over overlapping pairs</strong>, the <strong>99th percentile</strong>, the number of overlapping pairs and of pairs deeper than the target, and where the deepest pair is;</li>
+<li><strong>cell–wall penetration</strong>: the deepest any cell axis comes within one radius of the side and top walls or of the small wall triangles (a cell axis crossing a wall counts as one radius).</li>
+</ul>
+<p>The exported states cannot be used for this: they are rounded to 2 decimals and <code>an</code> to 0.01·π, which alone moves a cell tip by up to ~0.03 (4% of the width).</p>
+<p><strong>Target:</strong> max cell–cell penetration &lt; 5% of the cell width (0.040 for width 0.8) at every snapshot after a <strong>warm-up of 3000 steps</strong>. The initial 1000 cells are placed at random and overlap heavily (pairs crossing each other completely); Rapier separates them in ~1500–3000 steps. Resting contacts always sit slightly inside each other (~0.1–0.5% of the width): Rapier’s allowed penetration and soft contacts.</p>
+<p>Tools: <code>run.js --overlap-log FILE [--overlap-check]</code>, <code>tools/overlap_report.py</code> (tables), <code>tools/overlap_chart.py</code> (charts), and in the browser the overlap readout and the diagnostic view.</p>
+</section>
+<section id="final-defaults-on-three-seeds-120-000-steps-each" class="level2">
+<h2 class="anchored" data-anchor-id="final-defaults-on-three-seeds-120-000-steps-each">Final defaults on three seeds (120 000 steps each)</h2>
+<p>Rapier with the final defaults: 12 solver iterations, 720 Hz contact stiffness, colliders replaced on growth with the world rebuilt every 10 000 steps, all model fixes, and <strong>anchors that let go of a cell dragged more than 2 units from its anchor point</strong> (<code>anchorMaxStretch=2</code>). Seeds 7, 11 and 23. Statistics over the 391 snapshots after the warm-up (step 3000–120 000) of each run; percentages of the cell width.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Seed</th>
+<th>Snapshots over the target</th>
+<th>Worst max</th>
+<th>Median max</th>
+<th>Mean (overlapping pairs)</th>
+<th>Worst 99th pct</th>
+<th>Wall: median / worst</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>7</td>
+<td><strong>0</strong> / 391</td>
+<td>3.4%</td>
+<td>0.97%</td>
+<td>0.17%</td>
+<td>0.79%</td>
+<td>5.3% / 46%</td>
+</tr>
+<tr class="even">
+<td>11</td>
+<td><strong>0</strong> / 391</td>
+<td>3.2%</td>
+<td>0.96%</td>
+<td>0.17%</td>
+<td>0.78%</td>
+<td>5.0% / 15%</td>
+</tr>
+<tr class="odd">
+<td>23</td>
+<td><strong>0</strong> / 391</td>
+<td>2.7%</td>
+<td>0.96%</td>
+<td>0.17%</td>
+<td>0.79%</td>
+<td>4.0% / 50%</td>
+</tr>
+</tbody>
+</table>
+<p><img src="charts/overlap-anchorstretch2-seed7-120k.svg" class="img-fluid" alt="seed 7"> <img src="charts/overlap-anchorstretch2-seed11-120k.svg" class="img-fluid" alt="seed 11"> <img src="charts/overlap-anchorstretch2-seed23-120k.svg" class="img-fluid" alt="seed 23"></p>
+<p>Typical state once the chamber is full (~1730–1760 cells, ~2700 touching pairs): mean penetration 0.17% of the width, 99% of contacts below 0.8%, the deepest pair around 1%.</p>
+<!-- LONGRUN -->
+</section>
+<section id="anchors-that-never-let-go-the-testbeds-behaviour-the-default-until-14-november" class="level2">
+<h2 class="anchored" data-anchor-id="anchors-that-never-let-go-the-testbeds-behaviour-the-default-until-14-november">Anchors that never let go (the testbed’s behaviour; the default until 14 November)</h2>
+<p>With <code>anchorMaxStretch=0</code> the same three seeds had a few exceptions, and the 600 000-step run had 20:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Run</th>
+<th>Snapshots over the target</th>
+<th>Worst max</th>
+<th>Median max</th>
+<th>Mean</th>
+<th>Wall: median</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>seeds 7 / 11 / 23, 120 000 steps</td>
+<td>2 / 2 / 2 of 391</td>
+<td>20.8% / 6.8% / 10.2%</td>
+<td>1.0%</td>
+<td>0.19%</td>
+<td>12–15%</td>
+</tr>
+<tr class="even">
+<td>seed 7, 600 000 steps</td>
+<td>20 of 1991 (1.0%)</td>
+<td>20.8%</td>
+<td>1.0%</td>
+<td>0.19%</td>
+<td>15%</td>
+</tr>
+<tr class="odd">
+<td>for comparison: <code>anchorMaxStretch=1</code>, seeds 7 / 11 / 23</td>
+<td>0 / 0 / 0 of 391</td>
+<td>3.4%</td>
+<td>1.0%</td>
+<td>0.17%</td>
+<td>2%</td>
+</tr>
+</tbody>
+</table>
+<p>Each exception was one pair (two pairs in a few snapshots), for a single snapshot. In the long run 15 of the 20 were under 10%; all were in the upper part of the chamber (y 149–198), mostly near the side walls, where anchored cells sit.</p>
+<p><strong>Cause (traced at seed 7, step 65 700, 20.8%):</strong> two cells in the wall zone, each held by two anchor springs stretched by 3–8 units. Anchors are 0.8 Hz springs (as in the testbed), too soft to hold a cell, so once the chamber is full the colony drags anchored cells several units away; the stretched spring then pulls back with ~ω²·stretch ≈ 160 units/s² (stretch 6), far above anything else acting on a cell. The two cells jitter against their neighbours at ~1 unit/s; one spins up from 0.04 to 5 rad/s within 9 steps and lands 0.17 inside the other, and the solver pushes it out over the next steps.</p>
+<p>Letting anchors go also changes how the colony organises (averages over steps 15 000–120 000; ⟨cos 2θ⟩ = +1 for cells pointing at the exit, −1 for cells lying across the chamber):</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Anchors</th>
+<th>⟨cos 2θ⟩ centre (seeds 7 / 11 / 23)</th>
+<th>⟨cos 2θ⟩ wall zones</th>
+<th>cells</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>never let go</td>
+<td>+0.30 / +0.29 / +0.30</td>
+<td>−0.19 / −0.18 / −0.23</td>
+<td>1725–1734</td>
+</tr>
+<tr class="even">
+<td><strong>let go at 2 units (default)</strong></td>
+<td>+0.52 / +0.49 / +0.47</td>
+<td>−0.13 / −0.19 / −0.19</td>
+<td>1735–1746</td>
+</tr>
+<tr class="odd">
+<td>let go at 1 unit</td>
+<td>+0.56 / +0.60 / +0.62</td>
+<td>−0.01 / +0.07 / +0.15</td>
+<td>1752–1758</td>
+</tr>
+</tbody>
+</table>
+<p>At 2 units the centre aligns more strongly with the flow, and the wall zones keep their organisation, with cells lying across the chamber. At 1 unit the wall zones change too.</p>
+<p>Logs: <code>data/overlap-rapier-anchorhold-*.csv</code> (anchors never let go), <code>data/overlap-rapier-anchorstretch{1,2}-*.csv</code>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="charts/overlap-anchorhold-seed7-600k.svg" class="img-fluid figure-img"></p>
+<figcaption>anchors never let go, seed 7, 600 000 steps</figcaption>
+</figure>
+</div>
+</section>
+<section id="other-settings-and-box2d-same-measurement" class="level2">
+<h2 class="anchored" data-anchor-id="other-settings-and-box2d-same-measurement">Other settings and Box2D (same measurement)</h2>
+<p>All Rapier rows here ran with anchors that never let go; compare them with the first row.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Run</th>
+<th>Snapshots over the target</th>
+<th>Worst max</th>
+<th>Median max</th>
+<th>Mean</th>
+<th>Worst 99th pct</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Rapier, final solver settings, anchors never let go, seeds 7 / 11 / 23</td>
+<td>2 / 2 / 2 of 391</td>
+<td>20.8%</td>
+<td>1.0%</td>
+<td>0.19%</td>
+<td>0.8%</td>
+</tr>
+<tr class="even">
+<td>same, but <strong>no world rebuild</strong> (leaks memory)</td>
+<td>0 / 0 / 0 of 391</td>
+<td>4.9%</td>
+<td>1.0%</td>
+<td>0.19%</td>
+<td>0.8%</td>
+</tr>
+<tr class="odd">
+<td>same, but contacts refreshed by turning colliders by π</td>
+<td>2 / 2 / 8 of 391</td>
+<td>11.2%</td>
+<td>1.0%</td>
+<td>0.19%</td>
+<td>0.9%</td>
+</tr>
+<tr class="even">
+<td>Rapier, 12 it., 480 Hz (no rebuild)</td>
+<td>2 / 0 / 1 of 391</td>
+<td>8.7% / 4.3% / 100%¹</td>
+<td>1.0%</td>
+<td>0.20%</td>
+<td>0.9%</td>
+</tr>
+<tr class="odd">
+<td>Rapier, 8 it., 480 Hz (no rebuild)</td>
+<td>6 / 3 / 9 of 391</td>
+<td>13.6%</td>
+<td>1.3–1.5%</td>
+<td>0.21%</td>
+<td>1.3%</td>
+</tr>
+<tr class="even">
+<td>Rapier, Rapier’s own solver defaults (4 it., 30 Hz), before the other fixes, seed 7, 30 000 steps</td>
+<td>62 / 91</td>
+<td>100%</td>
+<td>15.6%</td>
+<td>1.7%</td>
+<td>27%</td>
+</tr>
+<tr class="odd">
+<td><strong>Box2D</strong>, anchors never let go, seed 7, 30 000 steps</td>
+<td><strong>86 / 91</strong></td>
+<td>100%</td>
+<td>38.8%</td>
+<td>6.8%</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<!-- BOX2D -->
+<p>¹ a pair that crossed at the random start and separated only after the warm-up.</p>
+<p>Without world rebuilds there were no exceptions (0 of 1173 vs 6 of 1173 with rebuilds). The runs follow different trajectories after the first rebuild (step 10 000) and the events are rare, but 0 vs 6 is unlikely to be pure chance (p ≈ 0.03), so the rebuild may contribute, e.g.&nbsp;through the contact and spring caches starting cold (positions, angles, velocities, masses and springs are carried over exactly). It does not cause exceptions on its own: the <code>anchorMaxStretch</code> runs also rebuild every 10 000 steps and had none in 2346 snapshots. Running without rebuilds is not an option for long runs (memory; see NOTES.md).</p>
+<p>The Box2D port is far from the target: its random start leaves pairs crossed through each other for the whole run (it never separates them), and once the chamber fills its packing is denser (~1850–1940 cells vs ~1700–1760 in Rapier) with ~340 pairs per snapshot deeper than the target.</p>
+</section>
+<section id="cellwall-penetration" class="level2">
+<h2 class="anchored" data-anchor-id="cellwall-penetration">Cell–wall penetration</h2>
+<p>Not part of the target (pairwise), but measured. With the defaults the deepest cell–wall contact per snapshot is typically 4–5% of the cell width (median per seed), in the dead-end top corners and between the small wall triangles, where the colony’s pressure ends. Occasionally a cell’s axis still reaches a wall line (worst 46–50% in two of the three seeds). With anchors that never let go the median was 12–15%.</p>
+</section>
+<section id="browser-screenshots" class="level2">
+<h2 class="anchored" data-anchor-id="browser-screenshots">Browser screenshots</h2>
+<p>A 60 000-step session in headless Chrome with the final defaults (<code>index.html?seed=7</code>, 200 steps per frame; the page confirmed <code>anchorMaxStretch=2</code>), paused every ~6000 steps for screenshots: the whole chamber in the phase-contrast and diagnostic views, and diagnostic close-ups (~18 × 11 units) around the deepest pair at the last snapshot and of the top-left corner. In the diagnostic view each cell has its true capsule outline, and anchors are black squares with a line to their cell. Pairs deeper than 1% of the width are drawn orange, deeper than the target red. At the close-up zoom one pixel is ~0.013 units, so a 5% overlap (0.04) would show as ~3 pixels of outline crossing a neighbour.</p>
+<p>Readouts at each pause (overlap at the last snapshot; <code>screenshots/browser-session.log</code>): max 0.81–1.74% at every pause from step 6400 to 60 400; mean 0.16–0.21%; deepest wall contact 0.4–16%. There were no red pairs and no page errors, and the images show no visible overlap. The anchor lines are now all short (≤ 2 units). The session also downloaded the states through the page’s own <code>download()</code>: 17.7 MB, 206 snapshots, 10 942 cell ids, valid <code>LowRes.json</code>.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><img src="screenshots/step-012200-phase.jpg" class="img-fluid" alt="phase, step 12 200"></td>
+<td><img src="screenshots/step-012200-diagnostic.jpg" class="img-fluid" alt="diagnostic, step 12 200"></td>
+</tr>
+<tr class="even">
+<td><img src="screenshots/step-060400-phase.jpg" class="img-fluid" alt="phase, step 60 400"></td>
+<td><img src="screenshots/step-060400-diagnostic.jpg" class="img-fluid" alt="diagnostic, step 60 400"></td>
+</tr>
+<tr class="odd">
+<td><img src="screenshots/step-024400-zoom-deepest.jpg" class="img-fluid" alt="close-up around the deepest pair, step 24 400"></td>
+<td><img src="screenshots/step-036400-zoom-corner.jpg" class="img-fluid" alt="close-up of the top-left corner, step 36 400"></td>
+</tr>
+<tr class="even">
+<td><img src="screenshots/step-060400-zoom-deepest.jpg" class="img-fluid" alt="close-up around the deepest pair, step 60 400"></td>
+<td><img src="screenshots/step-060400-zoom-corner.jpg" class="img-fluid" alt="close-up of the top-left corner, step 60 400"></td>
+</tr>
+<tr class="odd">
+<td><img src="screenshots/step-024000-fluorescence.jpg" class="img-fluid" alt="fluorescence view, step 24 000"></td>
+<td><img src="screenshots/step-024000-fluorescence-page.jpg" class="img-fluid" alt="the page with controls and overlap readout"></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

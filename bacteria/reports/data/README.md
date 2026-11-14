@@ -20,4 +20,5 @@ width, and the locations of the deepest pair and the deepest wall contact. Summa
 | `overlap-early-rapier4it30hz-contactfix-seed7-30k.csv` | Rapier's own solver defaults (4 iterations, 30 Hz) with the contact fix, before the triangle, drag-clamp and division fixes | 7, 30 000 |
 | `overlap-early-rapier4it30hz-nocontactfix-seed7-22k.csv` | as above, without the contact fix (resizing colliders in place) | 7, ~22 000 |
 
+| `overlap-box2d-anchorstretch2-seed7-30k.csv` | Box2D with the final model defaults (anchors let go at 2 units) | 7, 30 000 |
 <!-- NEW-RUNS -->

@@ -280,7 +280,19 @@ seed-7 validation run byte for byte, which confirms determinism across world reb
 
 ## Rapier vs Box2D: colony organisation
 
-<!-- ORG-BOX2D -->
+With the final defaults (anchors let go at 2 units), same seed and window:
+
+| | cells | mean length `le` | ⟨cos 2θ⟩ centre | ⟨cos 2θ⟩ wall zones | S centre | S wall zones |
+|---|---|---|---|---|---|---|
+| Box2D | 1846 | 2.93 | +0.21 | +0.15 | 0.21 | 0.15 |
+| Rapier | 1702 | 2.93 | +0.37 | −0.11 | 0.38 | 0.15 |
+
+Box2D's centre aligns less, and its wall-zone cells point along the chamber more than Rapier's.
+The engines differ more here than with anchors that never let go (below). Box2D still overlaps
+heavily: 87 of 91 snapshots over the target, median max 31% of the width. Its packing is
+therefore not comparable cell for cell, and Box2D is no longer a reliable reference for the
+organisation.
+
 Same seed (7), anchors never letting go (the comparison was made before `anchorMaxStretch=2`
 became the default), averages over steps 15 000–30 000 (chamber full), from the
 exported states (`tools/organization.py`; ⟨cos 2θ⟩ = +1 for cells along the chamber's long axis
