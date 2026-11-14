@@ -105,4 +105,30 @@ reaches a wall line (50%). With `anchorMaxStretch` it drops to 2–5% (see above
 
 <!-- LONGRUN -->
 
-<!-- SCREENSHOTS -->
+## Browser screenshots
+
+A 60 000-step session in headless Chrome (`index.html?seed=7`, 200 steps per frame), paused every
+~6000 steps for screenshots: the whole chamber in the phase-contrast and diagnostic views, and
+diagnostic close-ups (~18 × 11 units) around the deepest pair at the last snapshot and of the
+top-left corner. In the diagnostic view each cell has its true capsule outline; pairs deeper than
+1% of the width are drawn orange, deeper than the target red. At the close-up zoom one pixel is
+~0.013 units, so a 5% overlap (0.04) would show as ~3 pixels of outline crossing a neighbour.
+
+Readouts at each pause (overlap at the last snapshot; `screenshots/browser-session.log`): max
+2.1% at step 6200, then 0.84–1.56% at every pause up to step 60 400; mean 0.16–0.21%. No red
+pairs, a few orange ones; no visible overlap in the phase-contrast images or the close-ups. Wall
+close-ups show cells packed against the wall teeth, consistent with the measured wall depth.
+
+(This session ran before world rebuilds were added; the rebuild was checked separately in the
+browser: seed 11 to step 21 400, two rebuilds, no errors, max 1.0%.)
+
+| | |
+|---|---|
+| ![phase, step 12 400](screenshots/step-012400-phase.jpg) | ![diagnostic, step 12 400](screenshots/step-012400-diagnostic.jpg) |
+| ![phase, step 60 400](screenshots/step-060400-phase.jpg) | ![diagnostic, step 60 400](screenshots/step-060400-diagnostic.jpg) |
+| ![close-up around the deepest pair, step 42 400](screenshots/step-042400-zoom-deepest.jpg) | ![close-up of the top-left corner, step 36 400](screenshots/step-036400-zoom-corner.jpg) |
+| ![close-up around the deepest pair, step 60 400](screenshots/step-060400-zoom-deepest.jpg) | ![close-up of the top-left corner, step 60 400](screenshots/step-060400-zoom-corner.jpg) |
+| ![fluorescence view, step 24 000](screenshots/step-024000-fluorescence.jpg) | ![the page with controls and overlap readout](screenshots/step-024000-fluorescence-page.jpg) |
+
+The session also downloaded the states through the page's own `download()`: 17.5 MB, 205
+snapshots, 10 954 cell ids, valid `LowRes.json`.
