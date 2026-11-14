@@ -370,7 +370,9 @@ seed-7 validation run byte for byte, which confirms determinism across world reb
 | **final defaults** | 1731–1750 | +0.49 / +0.50 / +0.48 | −0.14 / −0.07 / −0.09 | 0.49–0.50 |
 
 The centre is aligned towards the exit as before. The wall-zone cells still lie across the chamber,
-slightly less so than before. Cell count and length (2.90–2.92) are unchanged.
+slightly less so than before. Cell count and length (2.90–2.92) are unchanged. Over the
+600 000-step run, after the first 120 000 steps, the centre stays at +0.52 to +0.54 and the wall
+zones at −0.03 to −0.05 (closer to disordered), with 1752–1763 cells per 120 000-step window.
 
 ### Rapier vs Box2D
 
