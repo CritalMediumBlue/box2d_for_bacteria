@@ -21,7 +21,8 @@ Overnight work log for porting the microfluidic biofilm simulation from the Box2
     width, as you asked.
 - **Overlap (max < 8% of the cell width):** met at every snapshot of the 3-seed × 120 000-step
   validation (worst 7.3%; 2 of 1173 snapshots above 5%). Typical snapshot: deepest pair ~0.9% of
-  the width, mean 0.07%. <!-- STATUS-LONGRUN -->
+  the width, mean 0.07%. In the 600 000-step run: 1 of 1991 snapshots
+  over 8% (9.1%, one pair at the exit), 8 over 5%.
 - **Performance:** 8.7 ms per step with a full chamber, 19% faster than the overnight version
   (10.7 ms), and Rapier is 6–7× faster than Box2D. The slowest steps went from 17 to 11 ms, so the
   browser runs more evenly.
@@ -30,7 +31,7 @@ Overnight work log for porting the microfluidic biofilm simulation from the Box2
   colliders change (see "Performance").
 - **Deliverables:**
   - long-run state file `bacteria/output/states-rapier-600k-seed7.json` (gitignored):
-    <!-- STATE-FILE -->
+    2000 snapshots (one every 300 steps), 105 780 cell ids, seed 7, final defaults, 189 MB.
     Earlier long runs are kept for comparison:
     `bacteria/output/states-rapier-600k-seed7-anchorhold.json` (overnight; anchors never let go;
     187 MB, 2000 snapshots) and `…-kickdrag-partial.json` (anchors let go, drag kick; stopped at
@@ -313,12 +314,15 @@ resizing them in place: both cost the same). One group per step therefore pays t
 every step (+14% at 12 iterations). With 5 groups it is paid on 5 steps of 25 (+9%), and the
 largest single step stays well below the old spike every 25 steps (17 ms). Our own model code
 takes 0.2–0.3 ms per step.
-<!-- PERF-LONGRUN -->
+**600 000-step run with the final defaults** (seed 7, overlap measured every snapshot): 1 h 38 min,
+102 steps/s overall (overnight: 2 h 32 min). Physics median 9.9 ms/step at ~1757 cells over steps
+30 000–600 000 (some of it while the browser session shared the CPU).
 **Overnight 600 000-step run** (seed 7, anchors never letting go, overlap measured every snapshot): 2 h 32 min,
 66 steps/s overall. Physics median 14.2 ms/step at ~1740 cells over steps 30 000–600 000 (19 ms
 during steps 240 000–360 000, while validation runs shared the CPU).
 
-**Memory** (resident size of the Node process in the overnight run): 423 MB at step 31 000, 462 MB at
+**Memory.** In the final-defaults run: 334 MB at step 7000, 642 MB at 97 000, 810 MB at 188 000,
+849 MB at 370 000, 1078 MB at 461 000, then 1185 MB from ~520 000 to the end. In the overnight run: 423 MB at step 31 000, 462 MB at
 112 000, 625 MB at 197 000, 765 MB at 326 000, then 996 MB from ~465 000 to the end. It grows in
 steps because the WebAssembly heap never shrinks. Without world rebuilds it hit the 4 GB limit at
 step ~231 500. Growth is now much slower but not zero (see "Worth reviewing", item 8).
@@ -342,7 +346,8 @@ Target: max < 8% of the width since 14 November (5% before; both counts are give
 
 | Run | Snapshots over 8% / over 5% | Worst max | Median max | Mean (overlapping pairs) |
 |---|---|---|---|---|
-<!-- OVERLAP-LONGRUN -->| **120 000 steps, seeds 7 / 11 / 23, final defaults** | **0 / 0 / 0** / 0 / 0 / 2 of 391 | 3.6% / 3.9% / 7.3% | 0.9% | 0.07% |
+| **600 000 steps, seed 7, final defaults** | **1** / 8 of 1991 | 9.1% | 1.0% | 0.08% |
+| **120 000 steps, seeds 7 / 11 / 23, final defaults** | **0 / 0 / 0** / 0 / 0 / 2 of 391 | 3.6% / 3.9% / 7.3% | 0.9% | 0.07% |
 | same, 12 iterations | 0 / 0 of 1173 | 4.9% | 0.85% | 0.06% |
 | drag kick and synchronous growth, 12 it., anchors let go at 2 units | 0 / 0 of 1173 | 3.4% | 1.0% | 0.17% |
 | same, anchors never let go (`anchorMaxStretch=0`) | 4 / 6 of 1173 | 20.8% | 1.0% | 0.19% |
@@ -436,7 +441,7 @@ slow), so longer-term organisation was not compared.
    cell that divides in the same step hold nothing; daughters inherit the parent's colour.
 7. **Box2D baseline is not overlap-free either**: its random start leaves ~90 pairs crossed through
    each other for the whole run, and it never resolves them (see the overlap report).
-8. **Memory still creeps up slowly** (~1 GB after 600 000 steps; see Performance). Runs of a few
+8. **Memory still creeps up slowly** (~1.2 GB after 600 000 steps; see Performance). Runs of a few
    million steps in one process could approach the 4 GB WebAssembly limit. Options: a shorter
    `rapierRebuildInterval`, or re-creating the WebAssembly module from a saved state. Not
    investigated further. A crash still saves the snapshots recorded so far.

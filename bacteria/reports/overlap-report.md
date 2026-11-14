@@ -9,7 +9,8 @@ mean of 0.07%. You relaxed the target from 5% to about 8% in exchange for speed:
 instead of 12 make a step ~19% faster than before these changes (NOTES.md, "Performance"). With 12
 iterations the same model stays below 5% everywhere (worst 4.9%). With fewer than 8 iterations
 single pairs exceed 8% (worst 10–21% at 5–6 iterations).
-<!-- SUMMARY-LONGRUN -->
+In the 600 000-step run with the final defaults, 1 of 1991 snapshots went over 8% (9.1%, a single
+pair at the chamber exit) and 8 over 5%.
 
 Earlier configurations are kept below for comparison. Anchors that never let go (the testbed's
 behaviour) gave single pairs up to 20.8% deep, caused by stretched anchor springs. Box2D, measured
@@ -61,7 +62,34 @@ iterations**, 720 Hz contact stiffness, colliders replaced on growth with the wo
 
 Logs: `data/overlap-rapier-final-seed*-120k.csv`.
 
-<!-- LONGRUN -->
+## Long run: 600 000 steps (seed 7, final defaults)
+
+`node bacteria/build/run.js --steps 600000 --seed 7 --overlap-log …` took 1 h 38 min (the overnight
+run took 2 h 32 min). It exported 2000 snapshots (`bacteria/output/states-rapier-600k-seed7.json`,
+189 MB, 105 780 cell ids; not in git). Log: `data/overlap-rapier-final-seed7-600k.csv`.
+
+| | |
+|---|---|
+| Snapshots after the warm-up | 1991 |
+| Over 8% / over 5% | **1** / 8 |
+| Worst max | 9.1% (step 572 100, one pair at x −43.3, y 140.6: at the exit, near the left wall) |
+| Max per snapshot: median / 99th percentile | 0.98% / 3.6% |
+| Mean over overlapping pairs (average) | 0.08% |
+| Worst 99th percentile of pair depths in a snapshot | 0.81% |
+| Cells once full (step > 30 000) | 1706–1810, mean 1757 |
+| Cell–wall: median / 90th percentile / worst | 4.6% / 8.9% / 28% |
+
+![seed 7, 600 000 steps](charts/overlap-final-seed7-600k.svg)
+
+The 8 snapshots over 5% are spread over the run (steps 162 900–588 600), each with a single
+pair. The statistics stay flat, with no drift. The 120 000-step validation of seed 7 had no
+snapshot over 5%: this run's first 120 000 steps are identical to it, and the exceptions all come
+later. So over long runs the 8% target holds in 99.95% of snapshots, not in all. With 12 solver
+iterations (~1.5× the step time) there was no snapshot over 5% in 1173.
+
+Organisation, averages per 120 000-step window (`tools/organization.py`): centre ⟨cos 2θ⟩ +0.49,
+then +0.52 to +0.54; wall zones −0.14, then −0.03 to −0.05; 1733–1763 cells; mean length
+2.90–2.91.
 
 ## Continuous drag, growth groups and solver iterations
 
