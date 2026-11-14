@@ -73,11 +73,12 @@ export const DEFAULT_PARAMS = {
   // The testbed removed anchors after 200 s of *wall-clock* time. Here it is simulation
   // steps: 12000 = 200 s at 60 steps/s (the testbed's maximum, one step per frame).
   anchorLifetimeSteps: 12000,
-  // Optional (0 = off, the testbed's behaviour): an anchor lets go when its cell is farther than
-  // this from the anchor point (checked on growth steps). The 0.8 Hz springs do not hold cells, so
-  // once the chamber is full the colony drags anchored cells several units away, and the stretched
-  // springs pull them back hard enough to cause most of the remaining overlap excursions (NOTES.md).
-  anchorMaxStretch: 0,
+  // An anchor lets go when its cell's centre is farther than this from the anchor point (checked on
+  // growth steps), like extracellular matrix that yields under strain. 0 = never (the testbed): the
+  // 0.8 Hz springs do not hold cells, so once the chamber is full the colony drags anchored cells
+  // several units away, and the stretched springs pull them back hard enough to push them into
+  // their neighbours (the overlap excursions in NOTES.md). 2 units = 2.5 cell widths.
+  anchorMaxStretch: 2,
 
   // --- cell shape and material ---
   radius: 0.4, // end-cap radius (half the cell width)

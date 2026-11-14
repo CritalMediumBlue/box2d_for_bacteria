@@ -9,20 +9,26 @@ Overnight work log for porting the microfluidic biofilm simulation from the Box2
   line; Box2D is still selectable for comparison. Rendering (phase contrast, fluorescence,
   diagnostic) is separate from the physics. Snapshots and the download use the unchanged
   `LowRes.json` schema.
-- **Overlap target (max < 5% of the cell width):** met in **99.0%** of snapshots over a
-  600 000-step run (20 of 1991 over) and 99.5% in the 3-seed × 120 000-step validation. Typical
-  snapshot: deepest pair ~1% of the width, mean 0.2%. Not met *at all times*: every exception is
-  one or two pairs for a single snapshot (worst 20.8%). The cause is stretched anchor springs;
-  `anchorMaxStretch=1` or `2` removes the exceptions (0 of 2346 snapshots) but changes the
-  colony's organisation, so I left the default as the testbed had it. **That is your decision**
-  (item 1 of "Worth reviewing").
+- **Overlap target (max < 5% of the cell width):** met at every snapshot of the 3-seed ×
+  120 000-step validation with the final defaults (0 of 1173 over, worst 3.4%). Typical
+  snapshot: deepest pair ~1% of the width, mean 0.17%. <!-- STATUS-LONGRUN -->
+- **Anchors let go when stretched (decided 14 November):** an anchor releases its cell once the
+  colony has dragged it more than 2 units (2.5 cell widths) from the anchor point
+  (`anchorMaxStretch=2`), like extracellular matrix yielding. With anchors that never let go (the
+  testbed's behaviour, the overnight default), stretched springs flung cells into their
+  neighbours: 1% of snapshots over the target, worst 20.8%. Letting go also strengthens the
+  centre's alignment towards the exit (⟨cos 2θ⟩ +0.30 → +0.47 to +0.52); the wall zones are
+  unchanged (see "Changes to the model").
 - **Performance:** 6–7× faster than Box2D at equal cell count; ~14 ms per step with a full chamber
   (~1740 cells); 600 000 steps in 2 h 32 min (Box2D would take ~13 h).
 - **Two Rapier 0.21 problems worked around:** stale contacts when a collider grows, and a memory
   leak in the workaround (see "Rapier contact bug").
 - **Deliverables:**
-  - long-run state file `bacteria/output/states-rapier-600k-seed7.json` (187 MB, gitignored):
-    2000 snapshots, one every 300 steps, 105 172 cell ids, seed 7, final defaults;
+  - long-run state file `bacteria/output/states-rapier-600k-seed7.json` (gitignored):
+    <!-- STATE-FILE -->
+    The overnight run with anchors that never let go is kept as
+    `bacteria/output/states-rapier-600k-seed7-anchorhold.json` (187 MB, 2000 snapshots, 105 172
+    cell ids);
   - `reports/overlap-report.md`, with the CSV logs in `reports/data/` and charts;
   - this file.
 
@@ -76,7 +82,7 @@ warm-up. `python3 bacteria/tools/overlap_report.py overlap.csv` summarises an ov
 **Match Box2D first.** The goal was parity, so the Rapier version reproduces the Box2D model step
 for step, including its quirks, and differences are limited to the contact physics and the fixes
 below. Each fix is a parameter whose `0` value restores the original behaviour, and the fixes
-apply to both engines (Box2D with `centredDivision=0 dragClamp=0` and the old drag values gives
+apply to both engines (Box2D with `centredDivision=0 dragClamp=0 anchorMaxStretch=0` and the old drag values gives
 output byte-identical to before the port; checked for seed 7, 3000 steps).
 
 | Aspect | Box2D | Rapier | Notes |
@@ -99,8 +105,7 @@ move relative to each other keeps its old contact points, and resizing a collide
 (`setHalfHeight`/`setShape`) does not refresh them. A cell at rest — most cells once the chamber is
 full — then grows straight into its neighbours and the walls while the contact reports zero depth.
 Overlap rose steadily once the chamber filled (mean penetration 0.2% → 6% of the width over
-25 000 steps). `tools/rapier-stale-contacts.mjs` is a minimal reproduction (worth reporting
-upstream).
+25 000 steps). `tools/rapier-stale-contacts.mjs` is a minimal reproduction.
 
 - Fix (`rapierRefreshContacts=1`, default): replace the cell's collider on every growth step, which
   gives it fresh contacts. **Rapier 0.21 leaks WebAssembly memory** doing this when the collider
@@ -130,6 +135,16 @@ upstream).
   speed limit (15π rad/s in Rapier) and hit their neighbours like propellers. Traced as the cause
   of isolated deep-overlap spikes. Now a kick removes at most all of a cell's velocity/spin; cells
   whose kick removed less than that behave exactly as before.
+- `anchorMaxStretch=2` (decided 14 November): an anchor lets go of its cell once the cell's
+  centre is more than 2 units from the anchor point (checked every growth step), as
+  extracellular matrix would yield. The testbed's anchors never let go. Their 0.8 Hz springs are
+  too soft to hold a cell, so the colony dragged anchored cells 3–8 units away, and the
+  stretched springs then pulled them back hard enough to push them into their neighbours. That
+  caused all the remaining overlap excursions (see "Overlap results"). Effect on organisation
+  (seeds 7 / 11 / 23, steps 15 000–120 000): centre ⟨cos 2θ⟩ +0.30 / +0.29 / +0.30 →
+  +0.52 / +0.49 / +0.47; wall zones −0.19 / −0.18 / −0.23 → −0.13 / −0.19 / −0.19 (unchanged within
+  seed-to-seed variation). A 1-unit limit was also tested: it removes the excursions too but
+  changes the wall zones (⟨cos 2θ⟩ ≈ 0 to +0.15).
 - Cell size 0.8× (your request): radius 0.4, initial length 2.4–4.8, division at 4.8 ± 1.0. Drag
   coefficients scaled by 0.8² (linear) and 0.8⁴ (angular) so each kick changes a cell's velocity
   by the same fraction as at the old size (mass ∝ area, inertia ∝ mass·length²).
@@ -171,9 +186,9 @@ Then three seeds (7, 11, 23) × 120 000 steps, statistics from step 3000:
 
 ¹ a pair crossed at the random start that separated only after the warm-up.
 
-(These runs replaced colliders without world rebuilds, which leaks memory. The final
-configuration, with a rebuild every 10 000 steps, had 2 / 2 / 2 of 391 over the target; the cause
-of those exceptions is item 1 of "Worth reviewing".)
+(These runs replaced colliders without world rebuilds, which leaks memory, and anchors never let
+go. With a rebuild every 10 000 steps they had 2 / 2 / 2 of 391 over the target, all caused by
+stretched anchor springs; with anchors letting go at 2 units, 0 / 0 / 0.)
 
 So the default is 12 iterations with 720 Hz contacts. Contact stiffness costs no step time; more
 iterations do, and beyond 12 they made things worse at 480 Hz (as 16 did at 240 Hz above).
@@ -225,11 +240,12 @@ needs by default (12 instead of 4 iterations; with 4 iterations and 30 Hz it ran
 contact fix (replacing colliders) costs up to ~12% while the colony grows and ~0–5% once the
 chamber is full. Step time grows faster than linearly near a full chamber (more contacts
 per cell). Overlap measurement: ~5 ms per snapshot at 1770 cells (every 300 steps: <0.2%).
-**600 000-step run** (seed 7, final defaults, overlap measured every snapshot): 2 h 32 min,
+<!-- PERF-LONGRUN -->
+**Overnight 600 000-step run** (seed 7, anchors never letting go, overlap measured every snapshot): 2 h 32 min,
 66 steps/s overall. Physics median 14.2 ms/step at ~1740 cells over steps 30 000–600 000 (19 ms
 during steps 240 000–360 000, while validation runs shared the CPU).
 
-**Memory** (resident size of the Node process in that run): 423 MB at step 31 000, 462 MB at
+**Memory** (resident size of the Node process in the overnight run): 423 MB at step 31 000, 462 MB at
 112 000, 625 MB at 197 000, 765 MB at 326 000, then 996 MB from ~465 000 to the end. It grows in
 steps because the WebAssembly heap never shrinks. Without world rebuilds it hit the 4 GB limit at
 step ~231 500. Growth is now much slower but not zero (see "Worth reviewing", item 8).
@@ -251,21 +267,22 @@ Rapier separates it within ~1500–3000 steps.
 
 | Run | Snapshots over the target | Worst max | Median max | Mean (overlapping pairs) |
 |---|---|---|---|---|
-| **600 000 steps, seed 7, defaults** | **20 of 1991** (1.0%) | 20.8% | 1.0% | 0.19% |
-| 120 000 steps, seeds 7 / 11 / 23, defaults | 2 / 2 / 2 of 391 | 20.8% / 6.8% / 10.2% | 1.0% | 0.19% |
-| same, `anchorMaxStretch=2` / `=1` | 0 / 0 / 0 of 391 for each | 3.4% | 1.0% | 0.17% |
-| Box2D, seed 7, 30 000 steps | 86 of 91 | 100% | 38.8% | 6.8% |
+<!-- OVERLAP-LONGRUN -->| **120 000 steps, seeds 7 / 11 / 23, final defaults** | **0 / 0 / 0 of 391** | 3.4% / 3.2% / 2.7% | 1.0% | 0.17% |
+| same, anchors never let go (`anchorMaxStretch=0`) | 2 / 2 / 2 of 391 | 20.8% / 6.8% / 10.2% | 1.0% | 0.19% |
+| 600 000 steps, seed 7, anchors never let go | 20 of 1991 (1.0%) | 20.8% | 1.0% | 0.19% |
+| same as the first row, `anchorMaxStretch=1` | 0 / 0 / 0 of 391 | 3.4% | 1.0% | 0.17% |
+| Box2D, anchors never let go, seed 7, 30 000 steps | 86 of 91 | 100% | 38.8% | 6.8% |
 
-In the long run, each of the 20 exceptions is one pair (two pairs in three snapshots) in a single
-snapshot. 15 of them are under 10%. All lie in the upper part of the chamber (y 149–198), mostly
-near the side walls, where anchored cells are dragged by the colony. 12 of the 20 fall between
-steps 240 000 and 360 000; the other 120 000-step windows have 1–4. The first 120 000 steps
-reproduce the seed-7 validation run exactly (same two exceptions at steps 65 700 and 117 000),
-which confirms determinism across world rebuilds.
+With anchors that never let go, every exception was one pair (two pairs in a few snapshots) in a
+single snapshot, in the upper part of the chamber, mostly near the side walls, where anchored
+cells are dragged by the colony. The overnight long run's first 120 000 steps reproduce the
+seed-7 validation run byte for byte, which confirms determinism across world rebuilds.
 
 ## Rapier vs Box2D: colony organisation
 
-Same seed (7), current model settings, averages over steps 15 000–30 000 (chamber full), from the
+<!-- ORG-BOX2D -->
+Same seed (7), anchors never letting go (the comparison was made before `anchorMaxStretch=2`
+became the default), averages over steps 15 000–30 000 (chamber full), from the
 exported states (`tools/organization.py`; ⟨cos 2θ⟩ = +1 for cells along the chamber's long axis
 towards the exit, −1 across it; S = nematic order):
 
@@ -279,56 +296,44 @@ chamber fills (both reach ⟨cos 2θ⟩ ≈ +0.37–0.39 by step 30 000; Rapier 
 wall zones stay disordered, and the length distribution matches. Box2D holds ~9% more cells in
 the full chamber because it lets them overlap more (see the overlap report). Over longer runs
 the centre stays aligned and the wall-zone cells tend to lie across the chamber. In the
-600 000-step Rapier run the organisation is steady: averages per 120 000-step window
+overnight 600 000-step Rapier run (anchors never letting go) the organisation is steady: averages per 120 000-step window
 (the first starting at 15 000) are 1725–1749 cells, `le` 2.90–2.92, centre ⟨cos 2θ⟩ +0.295 to
 +0.308, wall zones −0.19 to −0.14, S centre 0.30–0.31. Box2D was only run to 30 000 steps (it is
 slow), so longer-term organisation was not compared.
 
 ## Worth reviewing / not done
 
-1. **Rare overlap excursions remain, caused by stretched anchor springs.** With the defaults, a
-   single pair occasionally exceeds the target for one or two snapshots: 2 of 391 snapshots per
-   seed in the 120 000-step validation (worst 20.8%) and 20 of 1991 in the 600 000-step run.
-   Traced one (seed 7, step 65 700): two anchored cells, held by
-   springs stretched 6.4 / 4.1 and 7.8 / 3.0 units, jitter at ~1 unit/s against their neighbours
-   (a 0.8 Hz spring stretched 6 units pulls with ~ω²·6 ≈ 160 units/s²); one spins up from 0.04 to
-   5 rad/s within 9 steps and lands 0.17 (21% of the width) inside the other; the solver pushes it
-   out over the next steps.
-
-   **Experiment** (`anchorMaxStretch`, off by default: an anchor lets go when its cell is farther
-   than this from the anchor point): with 1 or 2 units, **0 of 2346 snapshots** over the target
-   (3 seeds × 2 settings × 391; worst 3.4%), and the cell–wall penetration drops too (median 2–5%
-   of the width instead of ~13%). But it changes the colony's organisation markedly (seed 7, steps
-   15 000–120 000): centre alignment ⟨cos 2θ⟩ +0.30 (default) → +0.52 (2 units) → +0.56 (1 unit);
-   wall zones −0.19 → −0.13 → −0.01. Because anchors are part of the biology being modelled, I kept
-   the testbed's behaviour as the default; whether anchors should hold cells is your call (see
-   item 3).
-2. **Wall penetration under sustained pressure.** Not part of the stated target (pairwise), but
-   measured: the deepest cell–wall contact per snapshot is typically ~14% of the cell width (cells
-   pressed into the walls and between the small wall triangles, mostly in the dead-end top
-   corners), and occasionally a cell's axis reaches the wall line (50%). Contacts there
-   carry the colony's accumulated pressure. Isolated tests show the contacts themselves work; it
-   is the solver's limit under that load. Options: more iterations, or a small contact skin on
-   the walls (`ColliderDesc.setContactSkin`; untested), or reviewing why the pressure builds (next
-   item).
-3. **Anchors barely hold cells (both engines; a modelling question).** Anchors are 0.8 Hz springs
-   (stiffness from the cell's mass), so once the chamber is full the colony drags anchored cells
-   far from their anchor points: spring stretch at step 24 000 (seed 7), median / 90th percentile
-   / max: Box2D 2.1 / 6.3 / 11.6 units, Rapier 1.4 / 3.8 / 8.3 (at step 12 000 both ~0.1). Stretched
-   springs pull these cells back against the flow, adding stress in the wall zones, where most
-   overlap excursions and the wall penetration happen. If anchors are meant to pin cells, a stiffer
-   spring, a maximum stretch (detach), or a fixed joint would match that better.
-4. **Rapier contact bug** (`tools/rapier-stale-contacts.mjs`): worth reporting to dimforge. If it
-   is fixed upstream, `rapierRefreshContacts=0` saves 5–12% of the step time.
-5. **Drag model.** Drag is still the testbed's kick every 25 steps (now clamped). A continuous
+1. **Wall penetration under sustained pressure.** Not part of the stated target (pairwise), but
+   measured: the deepest cell–wall contact per snapshot is typically 4–5% of the cell width with
+   the final defaults (12–15% when anchors never let go). The deepest contacts are cells pressed
+   into the walls and between the small wall triangles, mostly in the dead-end top corners.
+   Occasionally a cell's axis still reaches the wall line (50%). Contacts there carry the colony's
+   accumulated pressure. Isolated tests show the contacts themselves work; it is the solver's
+   limit under that load. Options: more iterations, or a small contact skin on the walls
+   (`ColliderDesc.setContactSkin`; untested).
+2. **Anchor model.** Anchors are still the testbed's soft 0.8 Hz springs (stiffness from the
+   cell's mass), now releasing at 2 units of stretch. Before release, the colony drags anchored
+   cells up to that far. Spring stretch with anchors that never let go, at step 24 000 (seed 7),
+   median / 90th percentile / max: Box2D 2.1 / 6.3 / 11.6 units, Rapier 1.4 / 3.8 / 8.3. If
+   anchors are meant to pin cells firmly until they yield, a stiffer spring with the same release
+   distance would match that better. The release distance (2 units) is a model parameter; 1 unit
+   was also tested (see "Changes to the model").
+3. **Rapier contact bug** (`tools/rapier-stale-contacts.mjs`, a minimal reproduction; not reported
+   upstream, by decision). If a later Rapier version fixes it, `rapierRefreshContacts=0` saves
+   5–12% of the step time and makes world rebuilds unnecessary; the reproduction script shows
+   whether a version is fixed.
+4. **Drag model.** Drag is still the testbed's kick every 25 steps (now clamped). A continuous
    damping would be smoother but changes the dynamics and needs recalibration.
+5. **No random motion.** Cells feel no random forces or impulses (no Brownian or thermal noise,
+   and daughters keep the parent's exact angle). All randomness is in the initial cells, division
+   (split proportion, division length), friction, death and anchoring. Motion comes only from
+   growth pressure, contacts, anchors and drag.
 6. **Kept testbed quirks**: mass fixed at birth (counts the end caps twice); anchors created for a
    cell that divides in the same step hold nothing; daughters inherit the parent's colour.
 7. **Box2D baseline is not overlap-free either**: its random start leaves ~90 pairs crossed through
    each other for the whole run, and it never resolves them (see the overlap report).
 8. **Memory still creeps up slowly** (~1 GB after 600 000 steps; see Performance). Runs of a few
    million steps in one process could approach the 4 GB WebAssembly limit. Options: a shorter
-   `rapierRebuildInterval`, re-creating the WebAssembly module from a saved state, or the upstream
-   fix of the leak. Not investigated further. A crash still saves the snapshots recorded so far.
-9. **Not done:** Web Worker for the physics in the browser; cross-machine determinism check;
-   reporting the Rapier bug upstream.
+   `rapierRebuildInterval`, or re-creating the WebAssembly module from a saved state. Not
+   investigated further. A crash still saves the snapshots recorded so far.
+9. **Not done:** Web Worker for the physics in the browser; cross-machine determinism check.

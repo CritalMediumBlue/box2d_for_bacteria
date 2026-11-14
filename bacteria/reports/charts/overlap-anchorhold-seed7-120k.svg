@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" width="900" height="380" role="img" aria-label="Rapier, final defaults, seed 7 (120 000 steps)"><style>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" width="900" height="380" role="img" aria-label="Rapier, anchors never let go, seed 7 (120 000 steps)"><style>
   .surface { fill: #fcfcfb; } .title { fill: #0b0b0b; } .label, .tick { fill: #52514e; }
   .grid { stroke: #e4e3df; } .axis { stroke: #b9b8b2; } .warmup { fill: #efeee9; }
   .target { stroke: #52514e; } .s1 { stroke: #2a78d6; } .s2 { stroke: #eb6834; } .s3 { stroke: #1baf7a; }
@@ -12,7 +12,7 @@
   text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
 </style>
 <rect class="surface" width="900" height="380" rx="6"/>
-<text class="title" x="64" y="26" font-size="16" font-weight="600">Rapier, final defaults, seed 7 (120 000 steps)</text>
+<text class="title" x="64" y="26" font-size="16" font-weight="600">Rapier, anchors never let go, seed 7 (120 000 steps)</text>
 <text class="label" x="64" y="44" font-size="12">% of the cell width; values above 22.9% are drawn at the top edge</text>
 <rect class="warmup" x="64.0" y="52" width="17.9" height="276"/>
 <text class="label" x="68.0" y="320" font-size="11">warm-up</text>
