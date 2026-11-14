@@ -3,7 +3,28 @@
 Overnight work log for porting the microfluidic biofilm simulation from the Box2D port to
 [Rapier](https://rapier.rs) (`@dimforge/rapier2d-compat` 0.21.0, 2D, WebAssembly).
 
-<!-- STATUS -->
+## Status (morning of 14 November)
+
+- **Done:** Rapier is the default engine, with the full model, in the browser and on the command
+  line; Box2D is still selectable for comparison. Rendering (phase contrast, fluorescence,
+  diagnostic) is separate from the physics. Snapshots and the download use the unchanged
+  `LowRes.json` schema.
+- **Overlap target (max < 5% of the cell width):** met in **99.0%** of snapshots over a
+  600 000-step run (20 of 1991 over) and 99.5% in the 3-seed × 120 000-step validation. Typical
+  snapshot: deepest pair ~1% of the width, mean 0.2%. Not met *at all times*: every exception is
+  one or two pairs for a single snapshot (worst 20.8%). The cause is stretched anchor springs;
+  `anchorMaxStretch=1` or `2` removes the exceptions (0 of 2346 snapshots) but changes the
+  colony's organisation, so I left the default as the testbed had it. **That is your decision**
+  (item 1 of "Worth reviewing").
+- **Performance:** 6–7× faster than Box2D at equal cell count; ~14 ms per step with a full chamber
+  (~1740 cells); 600 000 steps in 2 h 32 min (Box2D would take ~13 h).
+- **Two Rapier 0.21 problems worked around:** stale contacts when a collider grows, and a memory
+  leak in the workaround (see "Rapier contact bug").
+- **Deliverables:**
+  - long-run state file `bacteria/output/states-rapier-600k-seed7.json` (187 MB, gitignored):
+    2000 snapshots, one every 300 steps, 105 172 cell ids, seed 7, final defaults;
+  - `reports/overlap-report.md`, with the CSV logs in `reports/data/` and charts;
+  - this file.
 
 ## How to run
 
@@ -204,7 +225,14 @@ needs by default (12 instead of 4 iterations; with 4 iterations and 30 Hz it ran
 contact fix (replacing colliders) costs up to ~12% while the colony grows and ~0–5% once the
 chamber is full. Step time grows faster than linearly near a full chamber (more contacts
 per cell). Overlap measurement: ~5 ms per snapshot at 1770 cells (every 300 steps: <0.2%).
-Memory: <!-- MEM -->
+**600 000-step run** (seed 7, final defaults, overlap measured every snapshot): 2 h 32 min,
+66 steps/s overall. Physics median 14.2 ms/step at ~1740 cells over steps 30 000–600 000 (19 ms
+during steps 240 000–360 000, while validation runs shared the CPU).
+
+**Memory** (resident size of the Node process in that run): 423 MB at step 31 000, 462 MB at
+112 000, 625 MB at 197 000, 765 MB at 326 000, then 996 MB from ~465 000 to the end. It grows in
+steps because the WebAssembly heap never shrinks. Without world rebuilds it hit the 4 GB limit at
+step ~231 500. Growth is now much slower but not zero (see "Worth reviewing", item 8).
 
 **Browser** (headless Chrome 156 on the same machine, 1400×900 canvas): physics runs at the same
 speed as in Node (12.5 ms/step at 1684 cells, measured in the page). Drawing takes ~1 ms of
@@ -215,7 +243,25 @@ in a desktop browser with GPU canvas, 1 step per frame (12.5 + 1 ms) fits a 60 H
 "Steps/frame" trades smoothness for speed (each extra step adds ~12 ms per frame at a full
 chamber). Running the physics in a Web Worker would decouple the two (not done).
 
-<!-- OVERLAP -->
+## Overlap results
+
+Full details, method and charts: `reports/overlap-report.md`. Percentages are of the cell width
+(0.8); statistics are taken after the 3000-step warm-up. The random start overlaps heavily, and
+Rapier separates it within ~1500–3000 steps.
+
+| Run | Snapshots over the target | Worst max | Median max | Mean (overlapping pairs) |
+|---|---|---|---|---|
+| **600 000 steps, seed 7, defaults** | **20 of 1991** (1.0%) | 20.8% | 1.0% | 0.19% |
+| 120 000 steps, seeds 7 / 11 / 23, defaults | 2 / 2 / 2 of 391 | 20.8% / 6.8% / 10.2% | 1.0% | 0.19% |
+| same, `anchorMaxStretch=2` / `=1` | 0 / 0 / 0 of 391 for each | 3.4% | 1.0% | 0.17% |
+| Box2D, seed 7, 30 000 steps | 86 of 91 | 100% | 38.8% | 6.8% |
+
+In the long run, each of the 20 exceptions is one pair (two pairs in three snapshots) in a single
+snapshot. 15 of them are under 10%. All lie in the upper part of the chamber (y 149–198), mostly
+near the side walls, where anchored cells are dragged by the colony. 12 of the 20 fall between
+steps 240 000 and 360 000; the other 120 000-step windows have 1–4. The first 120 000 steps
+reproduce the seed-7 validation run exactly (same two exceptions at steps 65 700 and 117 000),
+which confirms determinism across world rebuilds.
 
 ## Rapier vs Box2D: colony organisation
 
@@ -232,16 +278,18 @@ Both engines produce the same organisation: cells in the centre align towards th
 chamber fills (both reach ⟨cos 2θ⟩ ≈ +0.37–0.39 by step 30 000; Rapier gets there sooner), the
 wall zones stay disordered, and the length distribution matches. Box2D holds ~9% more cells in
 the full chamber because it lets them overlap more (see the overlap report). Over longer runs
-(Rapier, 120 000 steps) the centre stays aligned (+0.2 to +0.4) and the wall-zone cells tend to
-lie across the chamber (⟨cos 2θ⟩ down to −0.27). Box2D was only run to 30 000 steps (it is
+the centre stays aligned and the wall-zone cells tend to lie across the chamber. In the
+600 000-step Rapier run the organisation is steady: averages per 120 000-step window
+(the first starting at 15 000) are 1725–1749 cells, `le` 2.90–2.92, centre ⟨cos 2θ⟩ +0.295 to
++0.308, wall zones −0.19 to −0.14, S centre 0.30–0.31. Box2D was only run to 30 000 steps (it is
 slow), so longer-term organisation was not compared.
 
 ## Worth reviewing / not done
 
 1. **Rare overlap excursions remain, caused by stretched anchor springs.** With the defaults, a
    single pair occasionally exceeds the target for one or two snapshots: 2 of 391 snapshots per
-   seed in the 120 000-step validation (worst 20.8%); in the long run see
-   `reports/overlap-report.md`. Traced one (seed 7, step 65 700): two anchored cells, held by
+   seed in the 120 000-step validation (worst 20.8%) and 20 of 1991 in the 600 000-step run.
+   Traced one (seed 7, step 65 700): two anchored cells, held by
    springs stretched 6.4 / 4.1 and 7.8 / 3.0 units, jitter at ~1 unit/s against their neighbours
    (a 0.8 Hz spring stretched 6 units pulls with ~ω²·6 ≈ 160 units/s²); one spins up from 0.04 to
    5 rad/s within 9 steps and lands 0.17 (21% of the width) inside the other; the solver pushes it
@@ -278,3 +326,9 @@ slow), so longer-term organisation was not compared.
    cell that divides in the same step hold nothing; daughters inherit the parent's colour.
 7. **Box2D baseline is not overlap-free either**: its random start leaves ~90 pairs crossed through
    each other for the whole run, and it never resolves them (see the overlap report).
+8. **Memory still creeps up slowly** (~1 GB after 600 000 steps; see Performance). Runs of a few
+   million steps in one process could approach the 4 GB WebAssembly limit. Options: a shorter
+   `rapierRebuildInterval`, re-creating the WebAssembly module from a saved state, or the upstream
+   fix of the leak. Not investigated further. A crash still saves the snapshots recorded so far.
+9. **Not done:** Web Worker for the physics in the browser; cross-machine determinism check;
+   reporting the Rapier bug upstream.

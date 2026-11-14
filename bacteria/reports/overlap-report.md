@@ -1,6 +1,15 @@
 # Overlap report: Rapier port
 
-<!-- SUMMARY -->
+**Summary.** With the final defaults, the deepest cell–cell penetration stays below the target
+of 5% of the cell width in **99.0%** of snapshots over a 600 000-step run (1971 of 1991 after
+the warm-up) and in 99.5% of the 3-seed × 120 000-step validation. A typical full-chamber snapshot
+(~1740 cells, ~2700 touching pairs) has its deepest pair at ~1% of the width and a mean of 0.2%.
+The target is **not** met at every snapshot. The exceptions are single pairs (two in three
+snapshots), each for one snapshot, up to 20.8%. They come from anchor springs that the colony
+has stretched by several units. Letting anchors detach beyond a maximum stretch
+(`anchorMaxStretch=1` or `2`) removes them (0 of 2346 snapshots, worst 3.4%) but changes the
+colony's organisation, so it is left off pending a modelling decision. Box2D, measured the same
+way, is over the target in 86 of 91 snapshots.
 
 ## What is measured
 
@@ -103,7 +112,35 @@ per snapshot is typically ~12–15% of the width, in the dead-end top corners an
 wall triangles, where anchored cells and the colony's pressure end; occasionally a cell's axis
 reaches a wall line (50%). With `anchorMaxStretch` it drops to 2–5% (see above).
 
-<!-- LONGRUN -->
+## Long run: 600 000 steps (seed 7, final defaults)
+
+`node bacteria/build/run.js --steps 600000 --seed 7 --overlap-log …` took 2 h 32 min and
+exported 2000 snapshots (`bacteria/output/states-rapier-600k-seed7.json`, 187 MB, 105 172 cell
+ids; not in git). Log: `data/overlap-rapier-default-seed7-600k.csv`.
+
+| | |
+|---|---|
+| Snapshots after the warm-up | 1991 |
+| Over the target | **20** (1.0%); each one pair, two pairs in 3 snapshots, 23 pairs in total |
+| Worst max | 20.8% (step 65 700) |
+| Max per snapshot: median / 99th percentile | 1.02% / 5.0% |
+| Mean over overlapping pairs (average) | 0.19% |
+| Worst 99th percentile of pair depths in a snapshot | 0.87% |
+| Overlapping pairs per snapshot | ~2700 |
+| Cells once full (step > 30 000) | 1687–1790, mean 1740 |
+| Cell–wall: median / 90th percentile / worst | 15% / 35% / 50% |
+
+![seed 7, 600 000 steps](charts/overlap-default-seed7-600k.svg)
+
+The exceptions, by 120 000-step window: 2, 1, 12, 4, 1. 15 of the 20 are under 10%; the worst
+five are 20.8%, 16.4%, 15.9%, 12.7% and 11.1%. All are in the upper part of the chamber
+(y 149–198), mostly near the side walls, where anchored cells sit. Between exceptions the
+statistics stay flat for the whole run, with no drift in the median, mean or 99th percentile. The
+first 120 000 steps are byte-identical to the seed-7 validation run above, so world rebuilds do
+not break determinism.
+
+The colony's organisation is steady too (`tools/organization.py`, averages per 120 000-step window):
+centre ⟨cos 2θ⟩ +0.30 ± 0.01, wall zones −0.19 to −0.14, mean length 2.90–2.92.
 
 ## Browser screenshots
 

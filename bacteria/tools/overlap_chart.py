@@ -82,7 +82,8 @@ def main():
     s = 0
     while s <= xmax:
         label = f"{s / 1000:g}k" if s else "0"
-        out.append(f'<text class="tick" x="{X(s):.1f}" y="{M["top"] + ph + 18}" font-size="11" text-anchor="middle">{label}</text>')
+        anchor = "end" if X(s) > M["left"] + pw - 12 else "middle"  # keep the last tick clear of the end labels
+        out.append(f'<text class="tick" x="{X(s):.1f}" y="{M["top"] + ph + 18}" font-size="11" text-anchor="{anchor}">{label}</text>')
         s += xstep
     out.append(f'<text class="label" x="{M["left"] + pw / 2:.1f}" y="{H - 12}" font-size="12" text-anchor="middle">simulation step</text>')
     out.append(f'<line class="axis" x1="{M["left"]}" x2="{M["left"] + pw}" y1="{M["top"] + ph}" y2="{M["top"] + ph}" stroke-width="1"/>')
@@ -96,10 +97,12 @@ def main():
         pts = " ".join(f"{X(st):.1f},{Y(val):.1f}" for st, val in zip(steps, vals))
         out.append(f'<polyline class="{cls}" fill="none" stroke-width="2" stroke-linejoin="round" points="{pts}"/>')
         ends.append([Y(vals[-1]), name, key, vals[-1]])
-    ends.sort()
+    # nudge apart upwards from the axis, so no end label drops below the plot
+    ends.sort(reverse=True)
+    ends[0][0] = min(ends[0][0], M["top"] + ph)
     for i in range(1, len(ends)):
-        if ends[i][0] - ends[i - 1][0] < 14:
-            ends[i][0] = ends[i - 1][0] + 14
+        if ends[i - 1][0] - ends[i][0] < 14:
+            ends[i][0] = ends[i - 1][0] - 14
     for y, name, key, val in ends:
         out.append(f'<circle class="{key}" cx="{M["left"] + pw + 12}" cy="{y - 4:.1f}" r="4"/>')
         out.append(f'<text class="label" x="{M["left"] + pw + 20}" y="{y:.1f}" font-size="11">{name} {val:.2f}%</text>')
