@@ -150,6 +150,10 @@ Then three seeds (7, 11, 23) × 120 000 steps, statistics from step 3000:
 
 ¹ a pair crossed at the random start that separated only after the warm-up.
 
+(These runs replaced colliders without world rebuilds, which leaks memory. The final
+configuration, with a rebuild every 10 000 steps, had 2 / 2 / 2 of 391 over the target; the cause
+of those exceptions is item 1 of "Worth reviewing".)
+
 So the default is 12 iterations with 720 Hz contacts. Contact stiffness costs no step time; more
 iterations do, and beyond 12 they made things worse at 480 Hz (as 16 did at 240 Hz above).
 
@@ -234,11 +238,23 @@ slow), so longer-term organisation was not compared.
 
 ## Worth reviewing / not done
 
-1. **Rare overlap excursions remain.** With the defaults, a single pair occasionally exceeds the
-   target for one snapshot (about 1 snapshot in 700 in the multi-seed runs, up to ~6% of the
-   width). They are brief collisions at varying places, not a buildup. 16 iterations or stiffer
-   contacts may remove them at more cost (see "Overlap results"). The count for the long run is
-   in `reports/overlap-report.md`.
+1. **Rare overlap excursions remain, caused by stretched anchor springs.** With the defaults, a
+   single pair occasionally exceeds the target for one or two snapshots: 2 of 391 snapshots per
+   seed in the 120 000-step validation (worst 20.8%); in the long run see
+   `reports/overlap-report.md`. Traced one (seed 7, step 65 700): two anchored cells, held by
+   springs stretched 6.4 / 4.1 and 7.8 / 3.0 units, jitter at ~1 unit/s against their neighbours
+   (a 0.8 Hz spring stretched 6 units pulls with ~ω²·6 ≈ 160 units/s²); one spins up from 0.04 to
+   5 rad/s within 9 steps and lands 0.17 (21% of the width) inside the other; the solver pushes it
+   out over the next steps.
+
+   **Experiment** (`anchorMaxStretch`, off by default: an anchor lets go when its cell is farther
+   than this from the anchor point): with 1 or 2 units, **0 of 2346 snapshots** over the target
+   (3 seeds × 2 settings × 391; worst 3.4%), and the cell–wall penetration drops too (median 2–5%
+   of the width instead of ~13%). But it changes the colony's organisation markedly (seed 7, steps
+   15 000–120 000): centre alignment ⟨cos 2θ⟩ +0.30 (default) → +0.52 (2 units) → +0.56 (1 unit);
+   wall zones −0.19 → −0.13 → −0.01. Because anchors are part of the biology being modelled, I kept
+   the testbed's behaviour as the default; whether anchors should hold cells is your call (see
+   item 3).
 2. **Wall penetration under sustained pressure.** Not part of the stated target (pairwise), but
    measured: the deepest cell–wall contact per snapshot is typically ~14% of the cell width (cells
    pressed into the walls and between the small wall triangles, mostly in the dead-end top

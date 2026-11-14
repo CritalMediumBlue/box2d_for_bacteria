@@ -8,9 +8,12 @@ width, and the locations of the deepest pair and the deepest wall contact. Summa
 
 | File | Engine and settings | Seed, steps |
 |---|---|---|
-| `overlap-rapier-default-seed{7,11,23}-120k.csv` | Rapier, final defaults (12 iterations, 720 Hz, all fixes) | 7 / 11 / 23, 120 000 |
-| `overlap-rapier-i12-f480-seed*-120k.csv` | Rapier, 12 iterations, 480 Hz | 7 / 11 / 23, 120 000 |
-| `overlap-rapier-i8-f480-seed*-120k.csv` | Rapier, 8 iterations, 480 Hz | 7 / 11 / 23, 120 000 |
+| `overlap-rapier-default-seed{7,11,23}-120k.csv` | Rapier, final defaults: 12 iterations, 720 Hz, colliders replaced on growth + world rebuilt every 10 000 steps, all model fixes | 7 / 11 / 23, 120 000 |
+| `overlap-rapier-replace-norebuild-seed*-120k.csv` | as default but without world rebuilds (leaks memory; a run this way aborted at step ~231 500) | 7 / 11 / 23, 120 000 |
+| `overlap-rapier-flip-seed*-120k.csv` | as default but contacts refreshed by turning colliders by π (`rapierRefreshContacts=2`) | 7 / 11 / 23, 120 000 |
+| `overlap-rapier-anchorstretch{1,2}-seed*-120k.csv` | as default with `anchorMaxStretch` 1 or 2 (anchors let go of cells pulled farther away) | 7 / 11 / 23, 120 000 |
+| `overlap-rapier-i12-f480-seed*-120k.csv` | 12 iterations, 480 Hz (no rebuilds) | 7 / 11 / 23, 120 000 |
+| `overlap-rapier-i8-f480-seed*-120k.csv` | 8 iterations, 480 Hz (no rebuilds) | 7 / 11 / 23, 120 000 |
 | `overlap-box2d-seed7-30k.csv` | Box2D, current defaults (centred division, drag clamp, 0.8x cells) | 7, 30 000 |
 | `overlap-early-rapier4it30hz-contactfix-seed7-30k.csv` | Rapier's own solver defaults (4 iterations, 30 Hz) with the contact fix, before the triangle, drag-clamp and division fixes | 7, 30 000 |
 | `overlap-early-rapier4it30hz-nocontactfix-seed7-22k.csv` | as above, without the contact fix (resizing colliders in place) | 7, ~22 000 |
