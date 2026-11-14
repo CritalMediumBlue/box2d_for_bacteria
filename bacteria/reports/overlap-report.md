@@ -1,13 +1,19 @@
 # Overlap report: Rapier port
 
-**Summary.** With the final defaults, including anchors that let go of cells dragged more than
-2 units away (`anchorMaxStretch=2`, adopted on 14 November), the deepest cell–cell penetration
-stayed below the target of 5% of the cell width at **every** snapshot of the 3-seed ×
-120 000-step validation (0 of 1173 over; worst 3.4%). A typical full-chamber snapshot (~1740
-cells, ~2700 touching pairs) has its deepest pair at ~1% of the width and a mean of 0.17%.
-<!-- SUMMARY-LONGRUN -->With anchors that never let go (the testbed's behaviour), 1% of
-snapshots had a single pair over the target, up to 20.8%; the stretched anchor springs caused
-those. Box2D, measured the same way, is over the target in 86 of 91 snapshots.
+**Summary.** The final defaults (14 November) are continuous drag, growth spread over 5 groups
+per cycle, anchors that let go at 2 units of stretch, and 8 solver iterations. With them, the
+deepest cell–cell penetration stayed below **8%** of the cell width at every snapshot of the
+3-seed × 120 000-step validation (worst 7.3%; 2 of 1173 snapshots above the original 5% target).
+A typical full-chamber snapshot (~1740 cells) has its deepest pair at ~0.9% of the width and a
+mean of 0.07%. You relaxed the target from 5% to about 8% in exchange for speed: 8 iterations
+instead of 12 make a step ~19% faster than before these changes (NOTES.md, "Performance"). With 12
+iterations the same model stays below 5% everywhere (worst 4.9%). With fewer than 8 iterations
+single pairs exceed 8% (worst 10–21% at 5–6 iterations).
+<!-- SUMMARY-LONGRUN -->
+
+Earlier configurations are kept below for comparison. Anchors that never let go (the testbed's
+behaviour) gave single pairs up to 20.8% deep, caused by stretched anchor springs. Box2D, measured
+the same way, is over even the 8% target in most snapshots.
 
 ## What is measured
 
@@ -25,8 +31,9 @@ At every snapshot (every 300 steps) the runner measures, on the live simulation 
 The exported states cannot be used for this: they are rounded to 2 decimals and `an` to 0.01·π,
 which alone moves a cell tip by up to ~0.03 (4% of the width).
 
-**Target:** max cell–cell penetration < 5% of the cell width (0.040 for width 0.8) at every
-snapshot after a **warm-up of 3000 steps**. The initial 1000 cells are placed at random and
+**Target:** max cell–cell penetration < 8% of the cell width (0.064 for width 0.8) at every
+snapshot after a **warm-up of 3000 steps**. The target was 5% (0.040) until 14 November;
+the tables below show both. The initial 1000 cells are placed at random and
 overlap heavily (pairs crossing each other completely); Rapier separates them in ~1500–3000 steps.
 Resting contacts always sit slightly inside each other (~0.1–0.5% of the width): Rapier's allowed
 penetration and soft contacts.
@@ -36,31 +43,53 @@ Tools: `run.js --overlap-log FILE [--overlap-check]`, `tools/overlap_report.py` 
 
 ## Final defaults on three seeds (120 000 steps each)
 
-Rapier with the final defaults: 12 solver iterations, 720 Hz contact stiffness, colliders
-replaced on growth with the world rebuilt every 10 000 steps, all model fixes, and **anchors that
-let go of a cell dragged more than 2 units from its anchor point** (`anchorMaxStretch=2`). Seeds
-7, 11 and 23. Statistics over the 391 snapshots after the warm-up (step 3000–120 000) of each
-run; percentages of the cell width.
+Rapier with the final defaults: continuous drag (`continuousDrag=1`), growth in 5 groups per
+25-step cycle (`growthGroups=5`), anchors that let go at 2 units (`anchorMaxStretch=2`), **8 solver
+iterations**, 720 Hz contact stiffness, colliders replaced on growth with the world rebuilt every
+10 000 steps. Seeds 7, 11 and 23. Statistics over the 391 snapshots after the warm-up (step
+3000–120 000) of each run; percentages of the cell width.
 
-| Seed | Snapshots over the target | Worst max | Median max | Mean (overlapping pairs) | Worst 99th pct | Wall: median / worst |
-|---|---|---|---|---|---|---|
-| 7 | **0** / 391 | 3.4% | 0.97% | 0.17% | 0.79% | 5.3% / 46% |
-| 11 | **0** / 391 | 3.2% | 0.96% | 0.17% | 0.78% | 5.0% / 15% |
-| 23 | **0** / 391 | 2.7% | 0.96% | 0.17% | 0.79% | 4.0% / 50% |
+| Seed | Over 8% | Over 5% | Worst max | Median max | Mean (overlapping pairs) | Worst 99th pct | Wall: median / worst |
+|---|---|---|---|---|---|---|---|
+| 7 | **0** / 391 | 0 | 3.6% | 0.89% | 0.07% | 0.69% | 3.5% / 16% |
+| 11 | **0** / 391 | 0 | 3.9% | 0.90% | 0.06% | 0.73% | 3.8% / 13% |
+| 23 | **0** / 391 | 2 | 7.3% | 0.94% | 0.08% | 0.90% | 3.7% / 16% |
 
-![seed 7](charts/overlap-anchorstretch2-seed7-120k.svg)
-![seed 11](charts/overlap-anchorstretch2-seed11-120k.svg)
-![seed 23](charts/overlap-anchorstretch2-seed23-120k.svg)
+![seed 7](charts/overlap-final-seed7-120k.svg)
+![seed 11](charts/overlap-final-seed11-120k.svg)
+![seed 23](charts/overlap-final-seed23-120k.svg)
 
-Typical state once the chamber is full (~1730–1760 cells, ~2700 touching pairs): mean penetration
-0.17% of the width, 99% of contacts below 0.8%, the deepest pair around 1%.
+Logs: `data/overlap-rapier-final-seed*-120k.csv`.
 
 <!-- LONGRUN -->
 
+## Continuous drag, growth groups and solver iterations
+
+Same three seeds × 120 000 steps (2- and 3-iteration runs: seed 7, 60 000 steps), all with
+continuous drag and anchors that let go at 2 units. Columns: snapshots over 8% / over 5% (of 391
+per seed, summed over seeds), worst max, median max, mean.
+
+| Growth groups, solver iterations | Over 8% | Over 5% | Worst max | Median max | Mean |
+|---|---|---|---|---|---|
+| 25 groups, 12 iterations | 0 | 0 | 4.2% | 0.64–0.78% | 0.03% |
+| 5 groups, 12 iterations | 0 | 0 | 4.9% | 0.84–0.87% | 0.06% |
+| **5 groups, 8 iterations (default)** | **0** | 2 | 7.3% | 0.89–0.94% | 0.07% |
+| 5 groups, 6 iterations | 4 | 17 | 20.6% | 1.2–1.3% | 0.09% |
+| 5 groups, 5 iterations | 8 | 34 | 18.6% | 1.6–1.8% | 0.11% |
+| 5 groups, 4 iterations (to ~57 000 steps) | 10 | 26 | 25.7% | 1.7–2.0% | 0.11% |
+| 5 groups, 3 iterations (seed 7) | 20 of 191 | 58 of 191 | 16.8% | 3.8% | 0.18% |
+| 5 groups, 2 iterations (seed 7) | 130 of 191 | 142 of 191 | 56.9% | 13.8% | 0.33% |
+| for comparison: the testbed's drag kick and synchronous growth, 12 iterations | 0 | 0 | 3.4% | 0.96–0.97% | 0.17% |
+
+Continuous drag with spread growth roughly halves the typical overlap, because cells are no longer
+stopped and pushed again all at once. Fewer solver iterations trade this margin for speed. 8 is
+the fewest that stays below 8% on all three seeds. Logs: `data/overlap-rapier-smooth-g*-it*-*.csv`.
+
 ## Anchors that never let go (the testbed's behaviour; the default until 14 November)
 
-With `anchorMaxStretch=0` the same three seeds had a few exceptions, and the 600 000-step run
-had 20:
+These runs used the testbed's drag kick, synchronous growth and 12 iterations; "over the
+target" here means over 5%. With `anchorMaxStretch=0` the same three seeds had a few exceptions,
+and the 600 000-step run had 20:
 
 | Run | Snapshots over the target | Worst max | Median max | Mean | Wall: median |
 |---|---|---|---|---|---|
@@ -98,7 +127,9 @@ Logs: `data/overlap-rapier-anchorhold-*.csv` (anchors never let go), `data/overl
 
 ## Other settings and Box2D (same measurement)
 
-All Rapier rows here ran with anchors that never let go; compare them with the first row.
+All Rapier rows here ran with anchors that never let go, the testbed's drag kick and synchronous
+growth; compare them with the first row. "Over the target" means over 5%. Box2D is over 8% in
+most snapshots too (median max 31–39%).
 
 | Run | Snapshots over the target | Worst max | Median max | Mean | Worst 99th pct |
 |---|---|---|---|---|---|
@@ -127,11 +158,12 @@ for the whole run (it never separates them), and once the chamber fills its pack
 
 ## Cell–wall penetration
 
-Not part of the target (pairwise), but measured. With the defaults the deepest cell–wall contact
-per snapshot is typically 4–5% of the cell width (median per seed), in the dead-end top corners
-and between the small wall triangles, where the colony's pressure ends. Occasionally a cell's
-axis still reaches a wall line (worst 46–50% in two of the three seeds). With anchors that never
-let go the median was 12–15%.
+Not part of the target (pairwise), but measured. With the final defaults the deepest cell–wall
+contact per snapshot is typically 3.5–3.8% of the cell width (median per seed), and at worst
+13–16%. These deepest contacts are in the dead-end top corners and between the small wall
+triangles, where the colony's pressure ends. Before continuous drag and spread growth, with anchors
+letting go, the median was 4–5% and a cell's axis occasionally reached a wall line (46–50%). With
+anchors that never let go the median was 12–15%.
 
 ## Browser screenshots
 

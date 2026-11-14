@@ -11,7 +11,7 @@ import RAPIER from "@dimforge/rapier2d-compat";
 import type { Collider, ColliderDesc, ImpulseJoint, RigidBody, World } from "@dimforge/rapier2d-compat";
 import {
   CHAMBER, COLOR_CENTRE, COLOR_INITIAL, COLOR_WALL, DEFAULT_PARAMS, Point, RGB,
-  Simulation, SimulationParams, cellMassProperties, checkParams, dragFraction, orientationOf,
+  Simulation, SimulationParams, cellMassProperties, checkParams, continuousDampingRate, dragFraction, orientationOf,
 } from "./model.js";
 import { Rng, mulberry32, randomSeed } from "./rng.js";
 import { CellState, StateRecorder } from "./states.js";
@@ -38,6 +38,8 @@ interface Cell {
   /** Distance between the end-cap centres (the exported `le`). */
   length: number;
   growthRate: number;
+  /** Growth group (see growthGroups); inherited by daughters. */
+  phase: number;
   reproductiveLength: number;
   color: RGB;
   /** Anchor springs currently holding this cell. */
@@ -89,7 +91,7 @@ export class RapierSimulation implements Simulation {
       const y = this.rng() * (p.maxY - p.minY) + p.minY;
       const angle = this.rng() * 2 * Math.PI;
       const size = 0.2 * this.rng() * (p.maxSize - p.minSize) + p.minSize;
-      this.cells.push(this.createCell(x, y, angle, size, COLOR_INITIAL, 0));
+      this.cells.push(this.createCell(x, y, angle, size, COLOR_INITIAL, 0, i % p.growthGroups));
     }
     this.createWalls();
   }
@@ -127,6 +129,8 @@ export class RapierSimulation implements Simulation {
         .setLinvel(v.x, v.y)
         .setAngvel(cell.body.angvel())
         .setCanSleep(false)
+        .setLinearDamping(this.linearDamping(cell.mass))
+        .setAngularDamping(this.angularDamping(cell.inertia))
         .setAdditionalMassProperties(cell.mass, this.zero, cell.inertia));
       cell.body = body;
       cell.collider = this.world.createCollider(this.cellColliderDesc(cell.length, cell.sqrtFriction)
@@ -147,35 +151,14 @@ export class RapierSimulation implements Simulation {
     const p = this.params;
     for (let i = 0; i < p.rapierSubsteps; i++) { this.world.step(); }
     this.stepCount += 1;
+    const offset = this.stepCount % p.growthInterval;
+    const spacing = p.growthInterval / p.growthGroups;
 
-    if (this.stepCount % p.growthInterval !== 0) { return false; }
+    // The group of cells whose turn it is to grow (all cells with growthGroups = 1)
+    if (offset % spacing === 0 && this.growDivideAndMark(offset / spacing)) { this.removeMarkedCells(); }
 
-    this.growDivideAndMark();
-
-    // Remove cells marked for removal (left the chamber, or died); divided cells were reused
-    let kept = 0;
-    for (const cell of this.cells) {
-      if (cell.removed) {
-        this.detachAnchors(cell, false); // removing the body removes its springs
-        this.world.removeRigidBody(cell.body);
-      } else {
-        this.cells[kept++] = cell;
-      }
-    }
-    this.cells.length = kept;
-
-    // Remove expired anchors, and with anchorMaxStretch those pulled too far (removing the anchor
-    // body also removes its spring)
-    kept = 0;
-    for (const anchor of this.anchors) {
-      if (this.stepCount - anchor.createdAtStep >= p.anchorLifetimeSteps || this.overStretched(anchor)) {
-        if (anchor.cell) { anchor.cell.anchors.splice(anchor.cell.anchors.indexOf(anchor), 1); }
-        this.world.removeRigidBody(anchor.body);
-      } else {
-        this.anchors[kept++] = anchor;
-      }
-    }
-    this.anchors.length = kept;
+    // Anchors are checked once per growth cycle
+    if (offset === 0) { this.removeAnchors(); }
 
     if (p.rapierRefreshContacts === 1 && p.rapierRebuildInterval > 0 && this.stepCount % p.rapierRebuildInterval === 0) {
       this.rebuildWorld();
@@ -186,6 +169,49 @@ export class RapierSimulation implements Simulation {
       return true;
     }
     return false;
+  }
+
+  /** Remove cells marked for removal (left the chamber, or died); divided cells were reused. */
+  private removeMarkedCells(): void {
+    let kept = 0;
+    for (const cell of this.cells) {
+      if (cell.removed) {
+        this.detachAnchors(cell, false); // removing the body removes its springs
+        this.world.removeRigidBody(cell.body);
+      } else {
+        this.cells[kept++] = cell;
+      }
+    }
+    this.cells.length = kept;
+  }
+
+  /**
+   * Remove expired anchors, and with anchorMaxStretch those pulled too far (removing the anchor
+   * body also removes its spring).
+   */
+  private removeAnchors(): void {
+    const p = this.params;
+    let kept = 0;
+    for (const anchor of this.anchors) {
+      if (this.stepCount - anchor.createdAtStep >= p.anchorLifetimeSteps || this.overStretched(anchor)) {
+        if (anchor.cell) { anchor.cell.anchors.splice(anchor.cell.anchors.indexOf(anchor), 1); }
+        this.world.removeRigidBody(anchor.body);
+      } else {
+        this.anchors[kept++] = anchor;
+      }
+    }
+    this.anchors.length = kept;
+  }
+
+  /** Continuous drag as body damping (rate in 1/s; 0 with the testbed's drag kick). */
+  private linearDamping(mass: number): number {
+    const p = this.params;
+    return p.continuousDrag !== 0 ? continuousDampingRate(p.airResistance, mass, p.growthInterval) : 0;
+  }
+
+  private angularDamping(inertia: number): number {
+    const p = this.params;
+    return p.continuousDrag !== 0 ? continuousDampingRate(p.angularAirResistance, inertia, p.growthInterval) : 0;
   }
 
   private overStretched(anchor: Anchor): boolean {
@@ -208,24 +234,33 @@ export class RapierSimulation implements Simulation {
     }
   }
 
-  private growDivideAndMark(): void {
+  /**
+   * Grow, divide and mark for removal the cells of growth group `phase`.
+   * Returns whether any cell was marked for removal.
+   */
+  private growDivideAndMark(phase: number): boolean {
     const p = this.params;
     const dt = 1 / p.hertz;
-    const count = this.cells.length; // daughters appended below are first visited on the next growth step
+    const kick = p.continuousDrag === 0;
+    let marked = false;
+    const count = this.cells.length; // daughters appended below are first visited on their next growth step
     for (let i = 0; i < count; i++) {
       const cell = this.cells[i];
+      if (cell.phase !== phase) { continue; }
       const body = cell.body;
 
       // Grow along the long axis
       cell.length *= cell.growthRate;
       this.resizeCollider(cell);
 
-      // Drag. Box2D applied the force once per fixture (3x), and it acted during the next step;
-      // the same velocity change as an impulse now.
-      const v = body.linvel();
-      const linear = -dragFraction(p.airResistance, cell.mass, dt, p.dragClamp !== 0) * cell.mass;
-      body.applyImpulse({ x: linear * v.x, y: linear * v.y }, true);
-      body.applyTorqueImpulse(-dragFraction(p.angularAirResistance, cell.inertia, dt, p.dragClamp !== 0) * cell.inertia * body.angvel(), true);
+      if (kick) {
+        // The testbed's drag kick. Box2D applied the force once per fixture (3x), and it acted
+        // during the next step; the same velocity change as an impulse here.
+        const v = body.linvel();
+        const linear = -dragFraction(p.airResistance, cell.mass, dt, p.dragClamp !== 0) * cell.mass;
+        body.applyImpulse({ x: linear * v.x, y: linear * v.y }, true);
+        body.applyTorqueImpulse(-dragFraction(p.angularAirResistance, cell.inertia, dt, p.dragClamp !== 0) * cell.inertia * body.angvel(), true);
+      }
 
       const length = cell.length;
       const position = body.translation();
@@ -250,14 +285,14 @@ export class RapierSimulation implements Simulation {
         const parentId = cell.id;
         this.detachAnchors(cell, true);
         this.resetCell(cell, x1, y1, angle, lengthA, color, parentId);
-        this.cells.push(this.createCell(x2, y2, angle, lengthB, color, parentId));
+        this.cells.push(this.createCell(x2, y2, angle, lengthB, color, parentId, cell.phase));
         divided = true;
       }
 
       // Leave the chamber, or die at random (draws the death number only when inside, as Box2D did)
       if (position.x < p.minX || position.x > p.maxX || position.y < p.minY || position.y > p.maxY || this.rng() < p.randomDeathProbability) {
         // A divided parent no longer exists (its daughters stay, as in Box2D)
-        if (!divided) { cell.removed = true; }
+        if (!divided) { cell.removed = true; marked = true; }
       }
 
       // Near the side walls: different growth rate, and a chance to attach to the surface
@@ -276,6 +311,7 @@ export class RapierSimulation implements Simulation {
         cell.growthRate = 1 + p.rate;
       }
     }
+    return marked;
   }
 
   private takeSnapshot(): void {
@@ -288,7 +324,7 @@ export class RapierSimulation implements Simulation {
   }
 
   /** A new cell. Random numbers are drawn in Box2D's order: friction, then division length. */
-  private createCell(x: number, y: number, angle: number, length: number, color: RGB, parentId: number): Cell {
+  private createCell(x: number, y: number, angle: number, length: number, color: RGB, parentId: number, phase: number): Cell {
     const p = this.params;
     const friction = this.rng();
     const reproductiveLength = p.reproductiveLengthMean + (this.rng() - 0.5) * p.reproductiveLengthSpread;
@@ -297,6 +333,8 @@ export class RapierSimulation implements Simulation {
       .setTranslation(x, y)
       .setRotation(angle)
       .setCanSleep(false)
+      .setLinearDamping(this.linearDamping(mass))
+      .setAngularDamping(this.angularDamping(inertia))
       .setAdditionalMassProperties(mass, this.zero, inertia));
     // Box2D mixes frictions as sqrt(f1 * f2): store sqrt(f) and multiply
     const sqrtFriction = Math.sqrt(friction);
@@ -305,7 +343,7 @@ export class RapierSimulation implements Simulation {
     this.states.addLineage(id, parentId);
     return {
       id, body, collider, sqrtFriction, flipped: false, mass, inertia, length, color, reproductiveLength,
-      growthRate: 1 + p.rate, anchors: [], removed: false,
+      growthRate: 1 + p.rate, phase, anchors: [], removed: false,
     };
   }
 
@@ -364,6 +402,10 @@ export class RapierSimulation implements Simulation {
     body.setLinvel(this.zero, true);
     body.setAngvel(0, true);
     body.setAdditionalMassProperties(mass, this.zero, inertia, true);
+    if (p.continuousDrag !== 0) {
+      body.setLinearDamping(this.linearDamping(mass));
+      body.setAngularDamping(this.angularDamping(inertia));
+    }
     cell.mass = mass;
     cell.inertia = inertia;
     cell.length = length;

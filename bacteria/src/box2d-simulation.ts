@@ -8,7 +8,7 @@
 import * as b2 from "../../build/esm/index.js";
 import {
   CHAMBER, COLOR_CENTRE, COLOR_INITIAL, COLOR_WALL, DEFAULT_PARAMS, DRAG_APPLICATIONS_PER_CELL, Point, RGB, Simulation,
-  SimulationParams, checkParams, dragFraction, orientationOf,
+  SimulationParams, checkParams, continuousDampingRate, dragFraction, orientationOf,
 } from "./model.js";
 import { Rng, mulberry32, randomSeed } from "./rng.js";
 import { CellState, StateRecorder } from "./states.js";
@@ -16,6 +16,8 @@ import { CellState, StateRecorder } from "./states.js";
 /** Extra per-body state attached to each bacterium. */
 interface Bacterium extends b2.Body {
   growthRate: number;
+  /** Growth group (see growthGroups); inherited by daughters. */
+  phase: number;
   reproductiveLength: number;
   id: number;
   color: RGB;
@@ -62,7 +64,7 @@ export class Box2DSimulation implements Simulation {
       const y = this.rng() * (p.maxY - p.minY) + p.minY;
       const angle = this.rng() * 2 * Math.PI;
       const size = 0.2 * this.rng() * (p.maxSize - p.minSize) + p.minSize;
-      this.createBacterium(new b2.Vec2(x, y), angle, size, COLOR_INITIAL, 0);
+      this.createBacterium(new b2.Vec2(x, y), angle, size, COLOR_INITIAL, 0, i % p.growthGroups);
     }
 
     // Chamber walls: rows of small triangles, then the top and side walls (open at the bottom)
@@ -106,20 +108,37 @@ export class Box2DSimulation implements Simulation {
     const p = this.params;
     this.world.Step(1 / p.hertz, p.velocityIterations, p.positionIterations, p.particleIterations);
     this.stepCount += 1;
+    const offset = this.stepCount % p.growthInterval;
+    const spacing = p.growthInterval / p.growthGroups;
 
-    if (this.stepCount % p.growthInterval !== 0) { return false; }
+    // The group of cells whose turn it is to grow (all cells with growthGroups = 1)
+    if (offset % spacing === 0 && this.growDivideAndMark(offset / spacing)) { this.destroyMarkedCells(); }
 
-    this.growDivideAndMark();
+    // Anchors are checked once per growth cycle
+    if (offset === 0) { this.removeAnchors(); }
 
-    // Remove cells marked for destruction (divided, left the chamber, or died)
+    if (this.stepCount % p.snapshotInterval === 0) {
+      this.takeSnapshot();
+      return true;
+    }
+    return false;
+  }
+
+  /** Remove cells marked for destruction (divided, left the chamber, or died). */
+  private destroyMarkedCells(): void {
     for (let b = this.world.GetBodyList(); b; b = b.GetNext()) {
       if ((b as Bacterium).destroy) {
         this.world.DestroyBody(b);
       }
     }
+  }
 
-    // Remove expired anchors, and with anchorMaxStretch those pulled too far (destroying the anchor
-    // body also removes its joint)
+  /**
+   * Remove expired anchors, and with anchorMaxStretch those pulled too far (destroying the anchor
+   * body also removes its joint).
+   */
+  private removeAnchors(): void {
+    const p = this.params;
     for (let b = this.world.GetBodyList(); b; b = b.GetNext()) {
       const userData = b.GetUserData();
       if (!userData) { continue; }
@@ -130,21 +149,24 @@ export class Box2DSimulation implements Simulation {
         this.world.DestroyBody(b);
       }
     }
-
-    if (this.stepCount % p.snapshotInterval === 0) {
-      this.takeSnapshot();
-      return true;
-    }
-    return false;
   }
 
-  private growDivideAndMark(): void {
+  /**
+   * Grow, divide and mark for destruction the cells of growth group `phase`. Returns whether any
+   * cell was marked. New daughters are added at the head of the body list, so they are first
+   * visited on their next growth step.
+   */
+  private growDivideAndMark(phase: number): boolean {
     const p = this.params;
+    const kick = p.continuousDrag === 0;
+    let marked = false;
     for (let b = this.world.GetBodyList(); b; b = b.GetNext()) {
       if (b.GetType() !== b2.BodyType.b2_dynamicBody) { continue; }
       const body = b as Bacterium;
+      if (body.phase !== phase) { continue; }
 
-      // Grow along the long axis, and apply drag (once per fixture, as in the original)
+      // Grow along the long axis, and apply the testbed's drag kick (once per fixture, as in the
+      // original) unless drag is continuous
       for (let fixture = body.GetFixtureList(); fixture; fixture = fixture.GetNext()) {
         const shape = fixture.GetShape();
         if (shape.GetType() === b2.ShapeType.e_polygonShape) {
@@ -152,6 +174,7 @@ export class Box2DSimulation implements Simulation {
         } else if (shape.GetType() === b2.ShapeType.e_circleShape) {
           (shape as b2.CircleShape).m_p.y *= body.growthRate;
         }
+        if (!kick) { continue; }
         const velocity = body.GetLinearVelocity();
         const dt = 1 / p.hertz;
         if (p.dragClamp && dragFraction(p.airResistance, body.GetMass(), dt, false) > 1) {
@@ -187,14 +210,16 @@ export class Box2DSimulation implements Simulation {
         const position1 = new b2.Vec2(position.x - offsetB.x, position.y - offsetB.y);
         const position2 = new b2.Vec2(position.x + offsetA.x, position.y + offsetA.y);
 
-        this.createBacterium(position1, angle, lengthA, body.color, body.id);
-        this.createBacterium(position2, angle, lengthB, body.color, body.id);
+        this.createBacterium(position1, angle, lengthA, body.color, body.id, body.phase);
+        this.createBacterium(position2, angle, lengthB, body.color, body.id, body.phase);
         body.destroy = true;
+        marked = true;
       }
 
       // Leave the chamber, or die at random
       if (position.x < p.minX || position.x > p.maxX || position.y < p.minY || position.y > p.maxY || this.rng() < p.randomDeathProbability) {
         body.destroy = true;
+        marked = true;
       }
 
       // Near the side walls: different growth rate, and a chance to attach to the surface
@@ -209,6 +234,7 @@ export class Box2DSimulation implements Simulation {
         body.growthRate = 1 + p.rate;
       }
     }
+    return marked;
   }
 
   private takeSnapshot(): void {
@@ -229,7 +255,7 @@ export class Box2DSimulation implements Simulation {
     this.states.addSnapshot(cells);
   }
 
-  private createBacterium(position: b2.XY, angle: number, length: number, color: RGB, parentId: number): Bacterium {
+  private createBacterium(position: b2.XY, angle: number, length: number, color: RGB, parentId: number, phase: number): Bacterium {
     const p = this.params;
     const friction = this.rng();
     const bd = new b2.BodyDef();
@@ -246,7 +272,13 @@ export class Box2DSimulation implements Simulation {
       circleShape.m_p.Set(0, dy);
       body.CreateFixture(circleFixtureDef);
     }
+    if (p.continuousDrag !== 0) {
+      // Mass and inertia are computed from the fixtures here and never updated (as in the testbed)
+      body.SetLinearDamping(continuousDampingRate(p.airResistance, body.GetMass(), p.growthInterval));
+      body.SetAngularDamping(continuousDampingRate(p.angularAirResistance, body.GetInertia(), p.growthInterval));
+    }
     body.growthRate = 1 + p.rate;
+    body.phase = phase;
     body.reproductiveLength = p.reproductiveLengthMean + (this.rng() - 0.5) * p.reproductiveLengthSpread;
     body.color = color;
     body.id = this.nextId++;

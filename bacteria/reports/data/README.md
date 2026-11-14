@@ -2,15 +2,18 @@
 
 One CSV row per snapshot (every 300 steps), written by `run.js --overlap-log`. Columns: step,
 cells, overlapping pairs, max / mean / 99th-percentile cell-cell penetration depth, pairs over
-the target (5% of the cell width = 0.04), max cell-wall depth, max depth as a fraction of the
+the target at the time of the run (5% of the cell width = 0.04; 8% = 0.064 for the final-defaults
+log of the 600 000-step run), max cell-wall depth, max depth as a fraction of the
 width, and the locations of the deepest pair and the deepest wall contact. Summarise with
 `python3 ../../tools/overlap_report.py FILE`, plot with `../../tools/overlap_chart.py`.
 
 | File | Engine and settings | Seed, steps |
 |---|---|---|
-| `overlap-rapier-anchorstretch2-seed*-120k.csv` | **Rapier, final defaults**: 12 iterations, 720 Hz, colliders replaced on growth + world rebuilt every 10 000 steps, all model fixes, anchors let go at 2 units (`anchorMaxStretch=2`) | 7 / 11 / 23, 120 000 |
-| `overlap-rapier-anchorstretch1-seed*-120k.csv` | as default, anchors let go at 1 unit | 7 / 11 / 23, 120 000 |
-| `overlap-rapier-anchorhold-seed{7,11,23}-120k.csv` | as default, but anchors never let go (`anchorMaxStretch=0`, the testbed's behaviour; the default until 14 November) | 7 / 11 / 23, 120 000 |
+| `overlap-rapier-final-seed{7,11,23}-120k.csv` | **Rapier, final defaults (14 November)**: continuous drag, 5 growth groups, anchors let go at 2 units, 8 iterations, 720 Hz | 7 / 11 / 23, 120 000 |
+| `overlap-rapier-smooth-g{5,25}-it{2..12}-seed*-*.csv` | as final, with 25 or 5 growth groups and 2–12 solver iterations (2 and 3: seed 7, 60 000 steps) | 7 / 11 / 23, 120 000 |
+| `overlap-rapier-anchorstretch2-seed*-120k.csv` | the morning's defaults: drag kick, synchronous growth, 12 iterations, 720 Hz, colliders replaced on growth + world rebuilt every 10 000 steps, all model fixes, anchors let go at 2 units (`anchorMaxStretch=2`) | 7 / 11 / 23, 120 000 |
+| `overlap-rapier-anchorstretch1-seed*-120k.csv` | as the row above, anchors let go at 1 unit | 7 / 11 / 23, 120 000 |
+| `overlap-rapier-anchorhold-seed{7,11,23}-120k.csv` | as the morning's defaults, but anchors never let go (`anchorMaxStretch=0`, the testbed's behaviour; the default until 14 November) | 7 / 11 / 23, 120 000 |
 | `overlap-rapier-anchorhold-seed7-600k.csv` | as above, the overnight long run | 7, 600 000 |
 | `overlap-rapier-replace-norebuild-seed*-120k.csv` | anchors never let go, and no world rebuilds (leaks memory; a run this way aborted at step ~231 500) | 7 / 11 / 23, 120 000 |
 | `overlap-rapier-flip-seed*-120k.csv` | anchors never let go, and contacts refreshed by turning colliders by π (`rapierRefreshContacts=2`) | 7 / 11 / 23, 120 000 |

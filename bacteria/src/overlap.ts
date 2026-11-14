@@ -11,8 +11,11 @@
 
 import { CHAMBER, Simulation } from "./model.js";
 
-/** Target: max cell–cell penetration below this fraction of the cell width. */
-export const OVERLAP_TARGET_FRACTION = 0.05;
+/**
+ * Target: max cell–cell penetration below this fraction of the cell width. Originally 0.05; relaxed
+ * to 0.08 on 14 November in exchange for fewer solver iterations (faster steps; NOTES.md).
+ */
+export const OVERLAP_TARGET_FRACTION = 0.08;
 /** Steps to let the random initial placement (heavily overlapping) relax before the target applies. */
 export const OVERLAP_WARMUP_STEPS = 3000;
 
