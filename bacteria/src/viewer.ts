@@ -1,7 +1,7 @@
 /**
  * Browser viewer: runs the simulation, draws it (render.ts), measures overlaps, and saves states.
  *
- * URL parameters (all optional): engine=rapier|box2d, seed=N, style=phase|fluorescence|diagnostic,
+ * URL parameters (all optional): engine=rapier|box2d, seed=N, style=simple|diagnostic,
  * speed=steps per frame, view=minX,minY,maxX,maxY (zoom into a world area, e.g. view=-50,185,-35,200 for
  * the top-left corner), and any simulation parameter by name (e.g. snapshotInterval=600).
  *
@@ -53,7 +53,7 @@ for (const [key, value] of query) {
 const urlEngine = query.get("engine");
 engineSelect.value = urlEngine && isEngine(urlEngine) ? urlEngine : DEFAULT_ENGINE;
 const urlStyle = query.get("style") as RenderStyle | null;
-styleSelect.value = urlStyle && RENDER_STYLES.includes(urlStyle) ? urlStyle : "phase";
+styleSelect.value = urlStyle && RENDER_STYLES.includes(urlStyle) ? urlStyle : "simple";
 if (query.get("seed")) { seedInput.value = query.get("seed")!; }
 if (query.get("speed")) { speedInput.value = query.get("speed")!; }
 snapshotInput.value = String(urlOverrides.snapshotInterval ?? DEFAULT_PARAMS.snapshotInterval);

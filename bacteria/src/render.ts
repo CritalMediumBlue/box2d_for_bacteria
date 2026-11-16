@@ -3,20 +3,19 @@
  * angles, lengths, ids, anchors) and the chamber geometry, so either side can change on its own.
  *
  * Styles:
- *  - "phase":        phase-contrast microscopy look — dark cells with bright halos on grey, PDMS
- *                    walls around the chamber (default)
- *  - "fluorescence": cells glowing in the region colours (wall zone green, centre magenta) on black
- *  - "diagnostic":   flat colours, anchors and springs, and overlapping cells highlighted (the
- *                    viewer passes pairs deeper than 1% of the cell width: orange, red above the target)
+ *  - "simple":     each cell's capsule outline as one thin line, the walls and wall triangles as
+ *                  lines, and the anchors (joints) with their springs; no fills or effects (default)
+ *  - "diagnostic": flat colours, anchors and springs, and overlapping cells highlighted (the
+ *                  viewer passes pairs deeper than 1% of the cell width: orange, red above the target)
  *
- * Each cell is drawn as one stroked segment with round caps (a capsule). Cells are batched into a
- * handful of paths per frame, and the per-frame cell buffer is reused, so drawing allocates little.
+ * Cells are batched into a handful of paths per frame, and the per-frame cell buffer is reused, so
+ * drawing allocates little. Line widths are in screen pixels, whatever the zoom.
  */
 
 import { CHAMBER, Point, RGB, Simulation } from "./model.js";
 
-export type RenderStyle = "phase" | "fluorescence" | "diagnostic";
-export const RENDER_STYLES: RenderStyle[] = ["phase", "fluorescence", "diagnostic"];
+export type RenderStyle = "simple" | "diagnostic";
+export const RENDER_STYLES: RenderStyle[] = ["simple", "diagnostic"];
 
 /** World area to fit on screen. */
 export const VIEW = { minX: -55, maxX: 55, minY: 133, maxY: 205 };
@@ -24,7 +23,6 @@ export interface ViewRect { minX: number; maxX: number; minY: number; maxY: numb
 
 /** The chamber cavity (inside the walls) and the feeding channel it opens into. */
 const CHAMBER_BOX = { minX: -50, maxX: 50, minY: 140, maxY: 200 };
-const SHADES = 4;
 
 export interface RenderOptions {
   style: RenderStyle;
@@ -41,16 +39,13 @@ export class ChamberRenderer {
   private n = 0;
   private x = new Float64Array(0); private y = new Float64Array(0);
   private ux = new Float64Array(0); private uy = new Float64Array(0);
-  private shade = new Uint8Array(0);
   private region = new Uint8Array(0); // 0 initial, 1 wall zone, 2 centre (by colour)
   private regionColors: RGB[] = [];
-  private noise: HTMLCanvasElement | null = null;
-  private readonly collect = (x: number, y: number, angle: number, length: number, color: RGB, id: number): void => {
+  private readonly collect = (x: number, y: number, angle: number, length: number, color: RGB): void => {
     const k = this.n++;
     const h = length / 2;
     this.x[k] = x; this.y[k] = y;
     this.ux[k] = -Math.sin(angle) * h; this.uy[k] = Math.cos(angle) * h;
-    this.shade[k] = hash(id) % SHADES;
     let r = this.regionColors.indexOf(color);
     if (r < 0) { r = this.regionColors.length; this.regionColors.push(color); }
     this.region[k] = r;
@@ -74,8 +69,7 @@ export class ChamberRenderer {
     ctx.lineJoin = "round";
 
     switch (options.style) {
-      case "phase": this.drawPhase(options.radius); break;
-      case "fluorescence": this.drawFluorescence(options.radius); break;
+      case "simple": this.drawSimple(sim, scale, options.radius); break;
       case "diagnostic": this.drawDiagnostic(sim, scale, options); break;
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -83,41 +77,31 @@ export class ChamberRenderer {
 
   // ------------------------------------------------------------ styles
 
-  private drawPhase(radius: number): void {
-    // Medium: chamber and channel floor
-    this.clear("#8f918c");
-    // PDMS around the chamber, slightly brighter, with phase halos along its edges
-    this.fillPdms("#a9aba5");
-    this.strokeWalls("rgba(240,242,236,0.75)", 0.55, 0.0);
-    this.strokeWalls("rgba(40,42,40,0.55)", 0.18, -0.3);
-
-    // Cells: bright halo, dark body, slightly lighter core
-    this.strokeCells(null, "rgba(225,228,220,0.55)", 2 * radius + 0.5);
-    const bodies = ["#3a3c3a", "#424442", "#373936", "#464846"];
-    for (let s = 0; s < SHADES; s++) { this.strokeCells((k) => this.shade[k] === s, bodies[s], 2 * radius); }
-    this.strokeCells(null, "rgba(120,124,118,0.35)", 0.6 * radius, 0.75);
-
-    this.overlayNoise(0.10);
-    this.vignette(0.22);
-  }
-
-  private drawFluorescence(radius: number): void {
-    this.clear("#040405");
-    // Walls barely visible (autofluorescence of the PDMS edge)
-    this.fillPdms("#0b0c0e");
-    this.strokeWalls("rgba(90,95,110,0.35)", 0.25, 0);
-    // Glow, then body, per region colour
+  private drawSimple(sim: Simulation, scale: number, radius: number): void {
     const ctx = this.ctx;
-    ctx.globalCompositeOperation = "lighter";
-    for (let r = 0; r < this.regionColors.length; r++) {
-      const c = this.regionColors[r];
-      const rgb = (k: number, a: number) => `rgba(${Math.round(255 * Math.min(1, c.r * k))},${Math.round(255 * Math.min(1, c.g * k))},${Math.round(255 * Math.min(1, c.b * k))},${a})`;
-      this.strokeCells((k) => this.region[k] === r, rgb(1, 0.18), 2 * radius + 0.9);
-      this.strokeCells((k) => this.region[k] === r, rgb(1.05, 0.85), 2 * radius);
-      this.strokeCells((k) => this.region[k] === r, rgb(1.35, 0.35), 0.8 * radius, 0.85);
-    }
-    ctx.globalCompositeOperation = "source-over";
-    this.overlayNoise(0.05);
+    this.clear("#ffffff");
+    // Walls: the chamber outline and the small wall triangles
+    this.strokeWalls("#000000", 1.5 / scale, 0);
+    this.strokeTriangles("#000000", 1 / scale);
+    // Cells: capsule outlines, drawn as a dark capsule with a white one 1 px narrower on each side
+    // on top (two plain strokes, much faster than tracing outlines with arcs). The line lies just
+    // inside each cell, so two touching cells both keep theirs.
+    const line = 1 / scale;
+    this.strokeCells(null, "#303030", 2 * radius);
+    this.strokeCells(null, "#ffffff", Math.max(0, 2 * radius - 2 * line));
+    // Joints: anchors that hold a cell (point and spring). Anchor points left behind by a cell
+    // that divided hold nothing and are not drawn (the diagnostic view shows them).
+    const marker = 5 / scale;
+    ctx.beginPath();
+    sim.forEachAnchor((x, y, cell: Point | null) => {
+      if (!cell) { return; }
+      ctx.moveTo(x, y); ctx.lineTo(cell.x, cell.y);
+      ctx.rect(x - marker / 2, y - marker / 2, marker, marker);
+    });
+    ctx.strokeStyle = ctx.fillStyle = "#d02020";
+    ctx.lineWidth = line;
+    ctx.stroke();
+    ctx.fill(); // fills the anchor squares (the spring lines have no area)
   }
 
   private drawDiagnostic(sim: Simulation, scale: number, options: RenderOptions): void {
@@ -172,19 +156,19 @@ export class ChamberRenderer {
       const m = Math.max(n, 2 * this.x.length, 1024);
       this.x = new Float64Array(m); this.y = new Float64Array(m);
       this.ux = new Float64Array(m); this.uy = new Float64Array(m);
-      this.shade = new Uint8Array(m); this.region = new Uint8Array(m);
+      this.region = new Uint8Array(m);
     }
     this.n = 0;
     sim.forEachCell(this.collect);
   }
 
   /** Stroke the selected cells' axes as one path: a capsule of the given width each. */
-  private strokeCells(select: ((k: number) => boolean) | null, style: string, width: number, lengthFactor: number = 1): void {
+  private strokeCells(select: ((k: number) => boolean) | null, style: string, width: number): void {
     const ctx = this.ctx;
     ctx.beginPath();
     for (let k = 0; k < this.n; k++) {
       if (select && !select(k)) { continue; }
-      const ux = this.ux[k] * lengthFactor, uy = this.uy[k] * lengthFactor;
+      const ux = this.ux[k], uy = this.uy[k];
       ctx.moveTo(this.x[k] - ux, this.y[k] - uy);
       ctx.lineTo(this.x[k] + ux, this.y[k] + uy);
     }
@@ -249,50 +233,19 @@ export class ChamberRenderer {
     ctx.stroke();
   }
 
-  /** Camera-like grain: a fixed noise texture laid over the frame. */
-  private overlayNoise(alpha: number): void {
+  /** Outlines of the small wall triangles. */
+  private strokeTriangles(style: string, width: number): void {
     const ctx = this.ctx;
-    if (!this.noise) { this.noise = makeNoise(256); }
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = ctx.createPattern(this.noise, "repeat")!;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.restore();
+    ctx.beginPath();
+    for (const t of CHAMBER.triangles) {
+      const [a, b, c] = t.vertices;
+      ctx.moveTo(a.x + t.offset.x, a.y + t.offset.y);
+      ctx.lineTo(b.x + t.offset.x, b.y + t.offset.y);
+      ctx.lineTo(c.x + t.offset.x, c.y + t.offset.y);
+      ctx.closePath();
+    }
+    ctx.strokeStyle = style;
+    ctx.lineWidth = width;
+    ctx.stroke();
   }
-
-  /** Uneven illumination: darker towards the corners. */
-  private vignette(strength: number): void {
-    const ctx = this.ctx, w = ctx.canvas.width, h = ctx.canvas.height;
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.3, w / 2, h / 2, Math.hypot(w, h) * 0.6);
-    g.addColorStop(0, "rgba(0,0,0,0)");
-    g.addColorStop(1, `rgba(0,0,0,${strength})`);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-    ctx.restore();
-  }
-}
-
-function makeNoise(size: number): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const c = canvas.getContext("2d")!;
-  const img = c.createImageData(size, size);
-  let seed = 12345;
-  for (let i = 0; i < size * size; i++) {
-    seed = (seed * 1103515245 + 12345) >>> 0;
-    const v = (seed >>> 24);
-    img.data[4 * i] = img.data[4 * i + 1] = img.data[4 * i + 2] = v;
-    img.data[4 * i + 3] = 255;
-  }
-  c.putImageData(img, 0, 0);
-  return canvas;
-}
-
-function hash(id: number): number {
-  let h = id * 2654435761 >>> 0;
-  h ^= h >>> 15;
-  return h >>> 0;
 }

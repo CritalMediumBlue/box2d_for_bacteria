@@ -14,7 +14,7 @@ bacteria/
   src/states.ts             state recording in the LowRes.json format
   src/rng.ts                seeded random numbers (same seed -> same run)
   src/run.ts                command-line runner (Node)
-  src/render.ts             drawing (phase contrast / fluorescence / diagnostic), separate from physics
+  src/render.ts             drawing (simple / diagnostic views), separate from physics
   src/viewer.ts             browser viewer
   index.html                viewer page
   tools/overlap_report.py   summarise an overlap log as Markdown
@@ -58,8 +58,8 @@ npm run start-bacteria      # serves the repo and opens bacteria/index.html
 Space pauses, N steps once, J saves. In Chrome/Edge, J asks for a file once and then that file is
 overwritten automatically every 500 snapshots; otherwise auto-save downloads numbered copies.
 
-The header has the view style (phase contrast, fluorescence, diagnostic: overlapping cells in
-orange, deeper than the target in red), the engine and the snapshot interval (both apply on
+The header has the view style (simple: cell outlines, walls and joints as lines; diagnostic:
+overlapping cells in orange, deeper than the target in red), the engine and the snapshot interval (both apply on
 Restart), and shows the overlap at the last snapshot. URL parameters set the same things, plus any
 simulation parameter: `index.html?engine=box2d&seed=7&style=diagnostic&speed=20&snapshotInterval=600`.
 `window.biofilm` gives scripts the simulation, the latest overlap, timing, and `download()`.

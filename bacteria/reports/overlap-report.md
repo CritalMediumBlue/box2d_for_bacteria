@@ -203,7 +203,9 @@ deepest pair at the last snapshot and of the top-left corner. In the diagnostic 
 its true capsule outline, and anchors are black squares with a line to their cell. Pairs deeper
 than 1% of the width are drawn orange, deeper than the target (8%) red. At the close-up zoom one
 pixel is ~0.013 units, so a 5% overlap (0.04) would show as ~3 pixels of outline crossing a
-neighbour.
+neighbour. The phase-contrast and fluorescence views have since been replaced by the simple view
+(16 November). Their screenshots were removed, and the last row shows the simple view from a
+separate session (seed 7, step 12 200).
 
 Readouts at each pause (overlap at the last snapshot; `screenshots/browser-session.log`): max
 0.41–1.38% at every pause from step 6400 to 60 200; mean 0.06–0.09%; deepest wall contact
@@ -214,8 +216,7 @@ measured with other runs sharing the CPU.
 
 | | |
 |---|---|
-| ![phase, step 12 200](screenshots/step-012200-phase.jpg) | ![diagnostic, step 12 200](screenshots/step-012200-diagnostic.jpg) |
-| ![phase, step 60 200](screenshots/step-060200-phase.jpg) | ![diagnostic, step 60 200](screenshots/step-060200-diagnostic.jpg) |
+| ![diagnostic, step 12 200](screenshots/step-012200-diagnostic.jpg) | ![diagnostic, step 60 200](screenshots/step-060200-diagnostic.jpg) |
 | ![close-up around the deepest pair (1.4%), step 30 200](screenshots/step-030200-zoom-deepest.jpg) | ![close-up of the top-left corner, step 36 200](screenshots/step-036200-zoom-corner.jpg) |
 | ![close-up around the deepest pair, step 60 200](screenshots/step-060200-zoom-deepest.jpg) | ![close-up of the top-left corner, step 60 200](screenshots/step-060200-zoom-corner.jpg) |
-| ![fluorescence view, step 24 000](screenshots/step-024000-fluorescence.jpg) | ![the page with controls and overlap readout](screenshots/step-024000-fluorescence-page.jpg) |
+| ![the page in the simple view, step 12 200](screenshots/step-012200-simple-page.png) | ![simple view, close-up of the top-left corner, step 12 200](screenshots/step-012200-simple-corner.png) |

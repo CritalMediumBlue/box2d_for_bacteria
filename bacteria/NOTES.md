@@ -6,8 +6,8 @@ Overnight work log for porting the microfluidic biofilm simulation from the Box2
 ## Status (14 November, afternoon)
 
 - **Done:** Rapier is the default engine, with the full model, in the browser and on the command
-  line; Box2D is still selectable for comparison. Rendering (phase contrast, fluorescence,
-  diagnostic) is separate from the physics. Snapshots and the download use the unchanged
+  line; Box2D is still selectable for comparison. Rendering (a simple outline view and a
+  diagnostic view) is separate from the physics. Snapshots and the download use the unchanged
   `LowRes.json` schema.
 - **Model changes decided today** (all apply to both engines; see "Changes to the model"):
   - Anchors let go once the colony has dragged their cell more than 2 units from the anchor point
@@ -47,7 +47,7 @@ npm run build-bacteria                      # library (ES modules) + bacteria/
 
 # Browser: serves the repo and opens bacteria/index.html
 npm run start-bacteria
-#   URL options: ?engine=rapier|box2d&seed=7&style=phase|fluorescence|diagnostic&speed=20
+#   URL options: ?engine=rapier|box2d&seed=7&style=simple|diagnostic&speed=20
 #   and any parameter by name, e.g. &snapshotInterval=600&rapierContactFrequency=120
 
 # Command line (Rapier by default)
@@ -69,11 +69,9 @@ warm-up. `python3 bacteria/tools/overlap_report.py overlap.csv` summarises an ov
   `Simulation` interface that the runner, viewer, renderer and overlap check use. Box2D stays
   available (`--engine box2d`, or the Engine menu) as the reference; Rapier is the default.
 - **Rendering separate from physics** (`src/render.ts`): reads cells only through `Simulation`.
-  Three views: phase contrast (default: dark cells with bright halos on grey, PDMS walls with
-  halos, camera grain and uneven illumination), fluorescence (wall-zone cells green, centre cells
-  magenta, on black), diagnostic (flat colours, anchors and springs, overlapping cells
-  highlighted). Each cell is one stroked segment with round caps; cells are batched into a few
-  paths per frame.
+  Two views: simple (default: cell outlines, walls and joints as thin lines on white) and
+  diagnostic (flat colours, anchors and springs, overlapping cells highlighted). Cells are
+  batched into a few paths per frame.
 - **State recording/export**: unchanged `LowRes.json` schema (both engines produce the same format).
   Snapshot interval configurable (`snapshotInterval`, `--set`, the viewer's "Snapshot every" field
   or `?snapshotInterval=`). Download: "Save states…" / J, or `window.biofilm.download()`.
@@ -252,13 +250,16 @@ Contact stiffness can be changed per run (`--set rapierContactFrequency=…`,
 ## Rendering
 
 `render.ts` draws from the `Simulation` interface only (cell centre, angle, length, id, colour;
-anchors), so physics and drawing can change independently. Each cell is one segment stroked with
-round caps (a capsule), batched into a few paths per frame; the per-frame cell buffer is reused.
+anchors), so physics and drawing can change independently. Cells are batched into a few paths per
+frame; the per-frame cell buffer is reused. Line widths are in screen pixels at any zoom.
 
-- **Phase contrast** (default): grey medium, cells dark (four shades, by id) with a bright halo and
-  a slightly lighter core, PDMS walls lighter with bright/dark edge halos, the open channel below
-  the chamber, fixed camera grain and uneven illumination.
-- **Fluorescence**: cells glow in the region colours (wall zone green, centre magenta) on black.
+- **Simple** (default; replaced the phase-contrast and fluorescence views on 16 November): white
+  background. Each cell's capsule outline is a thin dark line, the chamber walls and the small
+  wall triangles are black lines, and the joints are red: each anchor that holds a cell, as a
+  small square with its spring as a line to the cell centre. Anchor points left behind by a cell
+  that divided hold nothing and are not shown. No fills, colours by region or effects. The
+  outline is drawn as a dark capsule stroke with a white one 1 px narrower on each side on top,
+  which takes ~1 ms per frame for 1700 cells; tracing the outlines with arcs took ~30 ms.
 - **Diagnostic**: flat colours with true capsule outlines on top, anchors (black squares) and their
   springs, and overlapping pairs highlighted: orange above 1% of the cell width, red above the
   target (8%; 5% until 14 November). Use it with `view=minX,minY,maxX,maxY` (or `biofilm.setView(...)`) to zoom in.
@@ -329,7 +330,7 @@ step ~231 500. Growth is now much slower but not zero (see "Worth reviewing", it
 
 **Browser** (headless Chrome 156 on the same machine, 1400×900 canvas): physics runs at the same
 speed as in Node (12.5 ms/step at 1684 cells, measured in the page). Drawing takes ~1 ms of
-script time per frame in the phase-contrast and fluorescence views (1700 cells) and ~28 ms in
+script time per frame in the simple view (1700 cells) and ~28 ms in
 the diagnostic view (capsule outlines plus the overlap measurement). The headless browser renders
 on the CPU and showed only 16–22 fps even when paused, so its frame rates are not representative;
 in a desktop browser with GPU canvas, 1 step per frame (12.5 + 1 ms) fits a 60 Hz frame, and
