@@ -23,6 +23,9 @@ Overnight work log for porting the microfluidic biofilm simulation from the Box2
   validation (worst 7.3%; 2 of 1173 snapshots above 5%). Typical snapshot: deepest pair ~0.9% of
   the width, mean 0.07%. In the 600 000-step run: 1 of 1991 snapshots
   over 8% (9.1%, one pair at the exit), 8 over 5%.
+- **16 November:** you changed `anchorProbability` from 0.0025 to 0.001 and `anchorMaxStretch`
+  from 2 to 4. The overlap, timing and organisation results in this file and in the overlap report
+  were measured with the previous values; the new ones have not been validated yet.
 - **Performance:** 8.7 ms per step with a full chamber, 19% faster than the overnight version
   (10.7 ms), and Rapier is 6–7× faster than Box2D. The slowest steps went from 17 to 11 ms, so the
   browser runs more evenly.

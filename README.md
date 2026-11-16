@@ -72,7 +72,7 @@ printed to stderr.
 - Defaults: 1000 initial cells, 60 steps per simulated second, cell width 0.8, growth every 25
   steps, 8 Rapier solver iterations. See `--list-params`; each parameter is documented in
   `bacteria/src/model.ts`.
-- Expected output: `--steps 3000` gives 10 snapshots and ~960 cells. The chamber fills after
+- Expected output: `--steps 3000` gives 10 snapshots and ~970 cells. The chamber fills after
   ~12 000 steps and then holds ~1700–1800 cells. 600 000 steps take ~1 h 40 min on one core
   (Xeon E-2246G) and give a ~190 MB file with 2000 snapshots.
 
