@@ -3,3 +3,4 @@ package-lock.json
 /build/esm/
 /bacteria/build/
 /bacteria/output/
+/_site/

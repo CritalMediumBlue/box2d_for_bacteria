@@ -1,0 +1,46 @@
+# Build the browser version of the bacteria simulation and publish it on GitHub Pages:
+#   https://<owner>.github.io/<repo>/bacteria/index.html
+# Requires Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+name: Deploy simulation to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; let a running deployment finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build the simulation and assemble the site
+        run: npm run build-bacteria-site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}bacteria/index.html
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

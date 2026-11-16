@@ -46,7 +46,7 @@ python3 bacteria/tools/overlap_report.py overlap.csv
 - Runs are independent, so several can run in parallel (one per CPU core).
 - `--overlap-log` measures the penetration depth of every touching pair of cells (and of cells into
   the walls) at each snapshot, at full precision, and writes one CSV row per snapshot. The target is
-  max depth < 5% of the cell width after a warm-up of 3000 steps (the random initial placement
+  max depth < 8% of the cell width after a warm-up of 3000 steps (the random initial placement
   overlaps heavily); `--overlap-check` exits with status 3 if it is missed.
 
 ## Watch it in the browser

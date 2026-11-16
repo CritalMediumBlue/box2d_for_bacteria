@@ -34,7 +34,8 @@
     "build-bacteria": "npm run build-box2d-module && tsc -p bacteria",
     "watch-bacteria": "tsc -p bacteria --watch",
     "start-bacteria": "http-server -c-1 -o bacteria/index.html",
-    "run-bacteria": "node bacteria/build/run.js"
+    "run-bacteria": "node bacteria/build/run.js",
+    "build-bacteria-site": "npm run build-bacteria && sh bacteria/tools/build-site.sh"
   },
   "repository": {
     "type": "git",
