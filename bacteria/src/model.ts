@@ -13,112 +13,112 @@ export type Engine = typeof ENGINES[number];
 
 /** All tunable parameters. Override any of them via the constructor (or `--set` in run.js). */
 export const DEFAULT_PARAMS = {
-  // --- physics stepping ---
-  hertz: 60, // time step = 1 / hertz
-  // Box2D only (same values the testbed used)
-  velocityIterations: 20,
-  positionIterations: 20,
-  particleIterations: 10,
-  // Rapier only. Defaults chosen by sweeping for the overlap target (NOTES.md): Rapier's own defaults
-  // (4 iterations, 30 Hz) let a packed colony compress far beyond it.
-  rapierSubsteps: 1, // world.step() calls per simulation step, each 1 / (hertz * rapierSubsteps) long
-  rapierSolverIterations: 8, // Rapier's default: 4
-  rapierPgsIterations: 1, // Rapier's default
-  rapierContactFrequency: 720, // contact stiffness (natural frequency, Hz); 0 = Rapier's default (30)
-  // How a growing cell gets fresh contacts (Rapier keeps stale ones otherwise; see resizeCollider in
-  // rapier-simulation.ts): 1 = replace its collider, 2 = turn it by pi, 0 = nothing
-  rapierRefreshContacts: 1,
-  rapierRebuildInterval: 10000, // with rapierRefreshContacts = 1: rebuild the Rapier world every N steps (0 = never)
+	// --- physics stepping ---
+	hertz: 60, // time step = 1 / hertz
+	// Box2D only (same values the testbed used)
+	velocityIterations: 20,
+	positionIterations: 20,
+	particleIterations: 10,
+	// Rapier only. Defaults chosen by sweeping for the overlap target (NOTES.md): Rapier's own defaults
+	// (4 iterations, 30 Hz) let a packed colony compress far beyond it.
+	rapierSubsteps: 1, // world.step() calls per simulation step, each 1 / (hertz * rapierSubsteps) long
+	rapierSolverIterations: 8, // Rapier's default: 4
+	rapierPgsIterations: 1, // Rapier's default
+	rapierContactFrequency: 720, // contact stiffness (natural frequency, Hz); 0 = Rapier's default (30)
+	// How a growing cell gets fresh contacts (Rapier keeps stale ones otherwise; see resizeCollider in
+	// rapier-simulation.ts): 1 = replace its collider, 2 = turn it by pi, 0 = nothing
+	rapierRefreshContacts: 1,
+	rapierRebuildInterval: 10000, // with rapierRefreshContacts = 1: rebuild the Rapier world every N steps (0 = never)
 
-  // --- chamber ---
-  minX: -50, maxX: 50, // cells leaving this range are removed
-  minY: 140, maxY: 200,
+	// --- chamber ---
+	minX: -50, maxX: 50, // cells leaving this range are removed
+	minY: 140, maxY: 200,
 
-  // --- initial population ---
-  initialCells: 1000,
-  // Cell sizes below are 0.8x the testbed's (radius 0.5, minSize 3, maxSize 6, reproductive length 6 +/- 2.5/2).
-  minSize: 2.4, maxSize: 4.8, // initial length = minSize + 0.2 * U(0,1) * (maxSize - minSize)
+	// --- initial population ---
+	initialCells: 1000,
+	// Cell sizes below are 0.8x the testbed's (radius 0.5, minSize 3, maxSize 6, reproductive length 6 +/- 2.5/2).
+	minSize: 2.4, maxSize: 4.8, // initial length = minSize + 0.2 * U(0,1) * (maxSize - minSize)
 
-  // --- growth and division (each cell once every growthInterval steps) ---
-  growthInterval: 25,
-  // Cells grow (and divide, and are checked for leaving, death and anchoring) in this many groups,
-  // spread evenly over the growthInterval cycle; each cell belongs to its mother's group (initial
-  // cells: assigned in turn). Must divide growthInterval. 1: every cell on the same step (the
-  // testbed), which pushes the whole colony in a pulse every growthInterval steps (NOTES.md).
-  // growthInterval (25): one group per step, the smoothest, but Rapier spends ~1.5 ms extra (at
-  // ~1750 cells) on every step in which any collider changes, i.e. ~14% more time per step.
-  // 5: a group every 5 steps, ~2% extra.
-  growthGroups: 5,
-  rate: 0.002 * 0.8, // per growth event: length *= 1 + rate
-  wallRate: 0.002 * 0.8, // growth rate near the side walls
-  wallZone: 20, // "near the wall" = within this distance of minX / maxX
-  reproductionProportionMin: 0.3, // daughter 1 gets min + U(0,1) * range of the parent
-  reproductionProportionRange: 0.2,
-  reproductiveLengthMean: 4.8, // division length = mean + (U(0,1) - 0.5) * spread
-  reproductiveLengthSpread: 2.0,
-  // 1: the two daughters exactly fill the parent's outline. 0: the testbed's placement, which shifts
-  // both daughters along the axis by radius * (proportion - 1/2), so one daughter's tip pokes up to
-  // 0.2 * radius (10% of the cell width) past the parent's end, into any neighbour touching it there.
-  centredDivision: 1,
-  randomDeathProbability: 0.001 * 0.15, // per cell per growth event
+	// --- growth and division (each cell once every growthInterval steps) ---
+	growthInterval: 25,
+	// Cells grow (and divide, and are checked for leaving, death and anchoring) in this many groups,
+	// spread evenly over the growthInterval cycle; each cell belongs to its mother's group (initial
+	// cells: assigned in turn). Must divide growthInterval. 1: every cell on the same step (the
+	// testbed), which pushes the whole colony in a pulse every growthInterval steps (NOTES.md).
+	// growthInterval (25): one group per step, the smoothest, but Rapier spends ~1.5 ms extra (at
+	// ~1750 cells) on every step in which any collider changes, i.e. ~14% more time per step.
+	// 5: a group every 5 steps, ~2% extra.
+	growthGroups: 5,
+	rate: 0.002 * 0.8, // per growth event: length *= 1 + rate
+	wallRate: 0.002 * 0.8, // growth rate near the side walls
+	wallZone: 20, // "near the wall" = within this distance of minX / maxX
+	reproductionProportionMin: 0.3, // daughter 1 gets min + U(0,1) * range of the parent
+	reproductionProportionRange: 0.2,
+	reproductiveLengthMean: 4.8, // division length = mean + (U(0,1) - 0.5) * spread
+	reproductiveLengthSpread: 2.0,
+	// 1: the two daughters exactly fill the parent's outline. 0: the testbed's placement, which shifts
+	// both daughters along the axis by radius * (proportion - 1/2), so one daughter's tip pokes up to
+	// 0.2 * radius (10% of the cell width) past the parent's end, into any neighbour touching it there.
+	centredDivision: 1,
+	randomDeathProbability: 0.001 * 0.15, // per cell per growth event
 
-  // --- drag ---
-  // Testbed coefficients (force = coefficient x velocity, applied once per Box2D fixture on growth
-  // steps). Scaled with the 0.8x cell size so drag changes a cell's velocity by the same fraction as
-  // before: mass scales with area (0.8^2), rotational inertia with mass x length^2 (0.8^4).
-  // Unscaled, the kick over-corrects (reverses) a small cell's velocity and spin. Testbed value: 0.007.
-  airResistance: 0.007 * 0.8 ** 2,
-  angularAirResistance: 0.007 * 0.8 ** 4,
-  // 1: drag acts continuously, as each body's own linear and angular damping (applied by the physics
-  // engine every step), with the same time-averaged strength as the testbed's kick (see
-  // continuousDampingRate). Set once at birth, since mass is fixed then: no per-step cost.
-  // 0: the testbed's kick on growth steps, which removes 50-100% of a cell's velocity at once and
-  // nothing in between, so cells stop and go every growthInterval steps (NOTES.md).
-  continuousDrag: 1,
-  // Only with continuousDrag = 0. 1: a drag kick removes at most all of a cell's velocity / spin (it
-  // can stop a cell, never reverse it). 0: the original kick, which for cells shorter than ~1.4
-  // reverses the spin and multiplies it by up to ~1.4 every growth step, so small cells without
-  // neighbours spin up until the physics engine's speed limit and hit their neighbours like
-  // propellers (see NOTES.md).
-  dragClamp: 1,
+	// --- drag ---
+	// Testbed coefficients (force = coefficient x velocity, applied once per Box2D fixture on growth
+	// steps). Scaled with the 0.8x cell size so drag changes a cell's velocity by the same fraction as
+	// before: mass scales with area (0.8^2), rotational inertia with mass x length^2 (0.8^4).
+	// Unscaled, the kick over-corrects (reverses) a small cell's velocity and spin. Testbed value: 0.007.
+	airResistance: 0.007 * 0.8 ** 2,
+	angularAirResistance: 0.007 * 0.8 ** 4,
+	// 1: drag acts continuously, as each body's own linear and angular damping (applied by the physics
+	// engine every step), with the same time-averaged strength as the testbed's kick (see
+	// continuousDampingRate). Set once at birth, since mass is fixed then: no per-step cost.
+	// 0: the testbed's kick on growth steps, which removes 50-100% of a cell's velocity at once and
+	// nothing in between, so cells stop and go every growthInterval steps (NOTES.md).
+	continuousDrag: 1,
+	// Only with continuousDrag = 0. 1: a drag kick removes at most all of a cell's velocity / spin (it
+	// can stop a cell, never reverse it). 0: the original kick, which for cells shorter than ~1.4
+	// reverses the spin and multiplies it by up to ~1.4 every growth step, so small cells without
+	// neighbours spin up until the physics engine's speed limit and hit their neighbours like
+	// propellers (see NOTES.md).
+	dragClamp: 1,
 
-  // --- surface attachment near the walls ---
-  anchorProbability: 0.0025, // per cell per growth event, when near a wall
-  anchorFrequencyHz: 0.8,
-  anchorDampingRatio: 0.3,
-  // The testbed removed anchors after 200 s of *wall-clock* time. Here it is simulation
-  // steps: 12000 = 200 s at 60 steps/s (the testbed's maximum, one step per frame).
-  anchorLifetimeSteps: 12000,
-  // An anchor lets go when its cell's centre is farther than this from the anchor point (checked on
-  // growth steps), like extracellular matrix that yields under strain. 0 = never (the testbed): the
-  // 0.8 Hz springs do not hold cells, so once the chamber is full the colony drags anchored cells
-  // several units away, and the stretched springs pull them back hard enough to push them into
-  // their neighbours (the overlap excursions in NOTES.md). 2 units = 2.5 cell widths.
-  anchorMaxStretch: 2,
+	// --- surface attachment near the walls ---
+	anchorProbability: 0.001, // per cell per growth event, when near a wall
+	anchorFrequencyHz: 0.8,
+	anchorDampingRatio: 0.3,
+	// The testbed removed anchors after 200 s of *wall-clock* time. Here it is simulation
+	// steps: 12000 = 200 s at 60 steps/s (the testbed's maximum, one step per frame).
+	anchorLifetimeSteps: 12000,
+	// An anchor lets go when its cell's centre is farther than this from the anchor point (checked on
+	// growth steps), like extracellular matrix that yields under strain. 0 = never (the testbed): the
+	// 0.8 Hz springs do not hold cells, so once the chamber is full the colony drags anchored cells
+	// several units away, and the stretched springs pull them back hard enough to push them into
+	// their neighbours (the overlap excursions in NOTES.md). 2 units = 2.5 cell widths.
+	anchorMaxStretch: 4,
 
-  // --- cell shape and material ---
-  radius: 0.4, // end-cap radius (half the cell width)
-  density: 0.0001,
-  restitution: 0.0,
-  // friction: each cell gets U(0,1)
+	// --- cell shape and material ---
+	radius: 0.4, // end-cap radius (half the cell width)
+	density: 0.0001,
+	restitution: 0.0,
+	// friction: each cell gets U(0,1)
 
-  // --- output ---
-  snapshotInterval: 300, // steps between saved snapshots (must be a multiple of growthInterval)
+	// --- output ---
+	snapshotInterval: 300, // steps between saved snapshots (must be a multiple of growthInterval)
 };
 
 export type SimulationParams = typeof DEFAULT_PARAMS & { seed: number };
 
 export function checkParams(p: SimulationParams): void {
-  // Snapshots are only checked on growth steps, so other values would silently skip snapshots
-  if (!Number.isInteger(p.growthInterval) || p.growthInterval < 1) {
-    throw new Error(`growthInterval must be a positive integer (got ${p.growthInterval})`);
-  }
-  if (!Number.isInteger(p.snapshotInterval) || p.snapshotInterval < 1 || p.snapshotInterval % p.growthInterval !== 0) {
-    throw new Error(`snapshotInterval must be a positive multiple of growthInterval (${p.growthInterval}); got ${p.snapshotInterval}`);
-  }
-  if (!Number.isInteger(p.growthGroups) || p.growthGroups < 1 || p.growthInterval % p.growthGroups !== 0) {
-    throw new Error(`growthGroups must be a positive integer that divides growthInterval (${p.growthInterval}); got ${p.growthGroups}`);
-  }
+	// Snapshots are only checked on growth steps, so other values would silently skip snapshots
+	if (!Number.isInteger(p.growthInterval) || p.growthInterval < 1) {
+		throw new Error(`growthInterval must be a positive integer (got ${p.growthInterval})`);
+	}
+	if (!Number.isInteger(p.snapshotInterval) || p.snapshotInterval < 1 || p.snapshotInterval % p.growthInterval !== 0) {
+		throw new Error(`snapshotInterval must be a positive multiple of growthInterval (${p.growthInterval}); got ${p.snapshotInterval}`);
+	}
+	if (!Number.isInteger(p.growthGroups) || p.growthGroups < 1 || p.growthInterval % p.growthGroups !== 0) {
+		throw new Error(`growthGroups must be a positive integer that divides growthInterval (${p.growthInterval}); got ${p.growthGroups}`);
+	}
 }
 
 // ---------------------------------------------------------------- chamber geometry
@@ -130,11 +130,11 @@ export interface Triangle { offset: Point; vertices: [Point, Point, Point]; }
 
 /** `count` rows, each placing every triangle in `vertexSets` at offset i * step (as the original test did). */
 function triangleRows(count: number, step: Point, ...vertexSets: [Point, Point, Point][]): Triangle[] {
-  const rows: Triangle[] = [];
-  for (let i = 0; i < count; i++) {
-    for (const vertices of vertexSets) { rows.push({ offset: { x: i * step.x, y: i * step.y }, vertices }); }
-  }
-  return rows;
+	const rows: Triangle[] = [];
+	for (let i = 0; i < count; i++) {
+		for (const vertices of vertexSets) { rows.push({ offset: { x: i * step.x, y: i * step.y }, vertices }); }
+	}
+	return rows;
 }
 
 const RIGHT_WALL_TRIANGLE: [Point, Point, Point] = [{ x: 50, y: 140 }, { x: 50, y: 142 }, { x: 49, y: 141 }];
@@ -146,17 +146,17 @@ const TOP_WALL_TRIANGLE: [Point, Point, Point] = [{ x: -50, y: 200 }, { x: -48, 
  * walls, then the top wall and two side walls (open at the bottom).
  */
 export const CHAMBER = {
-  triangles: [
-    ...triangleRows(12, { x: 0, y: 5 }, RIGHT_WALL_TRIANGLE, LEFT_WALL_TRIANGLE),
-    ...triangleRows(20, { x: 5, y: 0 }, TOP_WALL_TRIANGLE),
-  ],
-  edges: [
-    [{ x: -50, y: 200 }, { x: 50, y: 200 }],
-    [{ x: 50, y: 200 }, { x: 50, y: 140 }],
-    [{ x: -50, y: 200 }, { x: -50, y: 140 }],
-  ] as [Point, Point][],
-  /** Box2D's default fixture friction, which the walls used. */
-  friction: 0.2,
+	triangles: [
+		...triangleRows(12, { x: 0, y: 5 }, RIGHT_WALL_TRIANGLE, LEFT_WALL_TRIANGLE),
+		...triangleRows(20, { x: 5, y: 0 }, TOP_WALL_TRIANGLE),
+	],
+	edges: [
+		[{ x: -50, y: 200 }, { x: 50, y: 200 }],
+		[{ x: 50, y: 200 }, { x: 50, y: 140 }],
+		[{ x: -50, y: 200 }, { x: -50, y: 140 }],
+	] as [Point, Point][],
+	/** Box2D's default fixture friction, which the walls used. */
+	friction: 0.2,
 };
 
 // ---------------------------------------------------------------- cells
@@ -178,8 +178,8 @@ export const DRAG_APPLICATIONS_PER_CELL = 3;
  * rotational inertia). With `clamp` it is at most 1 (see dragClamp).
  */
 export function dragFraction(coefficient: number, massOrInertia: number, dt: number, clamp: boolean): number {
-  const fraction = DRAG_APPLICATIONS_PER_CELL * coefficient * dt / massOrInertia;
-  return clamp && fraction > 1 ? 1 : fraction;
+	const fraction = DRAG_APPLICATIONS_PER_CELL * coefficient * dt / massOrInertia;
+	return clamp && fraction > 1 ? 1 : fraction;
 }
 
 /**
@@ -190,7 +190,7 @@ export function dragFraction(coefficient: number, massOrInertia: number, dt: num
  * Both engines apply damping as v ← v / (1 + dt · rate) every step.
  */
 export function continuousDampingRate(coefficient: number, massOrInertia: number, growthInterval: number): number {
-  return DRAG_APPLICATIONS_PER_CELL * coefficient / (growthInterval * massOrInertia);
+	return DRAG_APPLICATIONS_PER_CELL * coefficient / (growthInterval * massOrInertia);
 }
 
 /**
@@ -199,34 +199,34 @@ export function continuousDampingRate(coefficient: number, massOrInertia: number
  * Box2D never recomputes them while the cell grows, so they stay fixed for the cell's life.
  */
 export function cellMassProperties(length: number, radius: number, density: number): { mass: number, inertia: number } {
-  const a = radius, b = length / 2;
-  const boxMass = density * 4 * a * b;
-  const capMass = density * Math.PI * a * a;
-  const boxInertia = boxMass * ((2 * a) ** 2 + (2 * b) ** 2) / 12;
-  const capInertia = capMass * (0.5 * a * a + b * b);
-  return { mass: boxMass + 2 * capMass, inertia: boxInertia + 2 * capInertia };
+	const a = radius, b = length / 2;
+	const boxMass = density * 4 * a * b;
+	const capMass = density * Math.PI * a * a;
+	const boxInertia = boxMass * ((2 * a) ** 2 + (2 * b) ** 2) / 12;
+	const capInertia = capMass * (0.5 * a * a + b * b);
+	return { mass: boxMass + 2 * capMass, inertia: boxInertia + 2 * capInertia };
 }
 
 /** Orientation as a fraction of π in [0, 1]. */
 export function orientationOf(angle: number): number {
-  return angle > 0 ? (angle / Math.PI) % 1 : 1 + (angle / Math.PI) % 1;
+	return angle > 0 ? (angle / Math.PI) % 1 : 1 + (angle / Math.PI) % 1;
 }
 
 // ---------------------------------------------------------------- engine interface
 
 /** What the runner and the viewer need from a simulation, whatever the physics engine. */
 export interface Simulation {
-  readonly engine: Engine;
-  readonly params: SimulationParams;
-  readonly states: StateRecorder;
-  /** Number of simulation steps taken so far. */
-  readonly stepCount: number;
-  /** Number of bacteria currently in the world. */
-  readonly cellCount: number;
-  /** Advance one simulation step. Returns true if a snapshot was taken. */
-  step(): boolean;
-  /** Each cell's centre, angle, end-cap centre distance, colour and id, at full precision. */
-  forEachCell(fn: (x: number, y: number, angle: number, length: number, color: RGB, id: number) => void): void;
-  /** For drawing: each anchor point, with the centre of the cell it holds (if that cell still exists). */
-  forEachAnchor(fn: (x: number, y: number, cell: Point | null) => void): void;
+	readonly engine: Engine;
+	readonly params: SimulationParams;
+	readonly states: StateRecorder;
+	/** Number of simulation steps taken so far. */
+	readonly stepCount: number;
+	/** Number of bacteria currently in the world. */
+	readonly cellCount: number;
+	/** Advance one simulation step. Returns true if a snapshot was taken. */
+	step(): boolean;
+	/** Each cell's centre, angle, end-cap centre distance, colour and id, at full precision. */
+	forEachCell(fn: (x: number, y: number, angle: number, length: number, color: RGB, id: number) => void): void;
+	/** For drawing: each anchor point, with the centre of the cell it holds (if that cell still exists). */
+	forEachAnchor(fn: (x: number, y: number, cell: Point | null) => void): void;
 }
