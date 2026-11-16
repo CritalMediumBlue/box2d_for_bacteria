@@ -128,6 +128,17 @@ function formatDuration(seconds: number): string {
 async function main(): Promise<void> {
   const opts = parseArgs(process.argv.slice(2));
   const out = path.resolve(opts.out);
+  // Create the output folders now, and check the states file can be written, rather than failing
+  // at the first save after the simulation has already run
+  try {
+    for (const file of [out, opts.overlapLog, opts.timingLog]) {
+      if (file) { fs.mkdirSync(path.dirname(path.resolve(file)), { recursive: true }); }
+    }
+    fs.closeSync(fs.openSync(`${out}.tmp`, "w"));
+    fs.unlinkSync(`${out}.tmp`);
+  } catch (e) {
+    fail(`cannot write ${out}: ${e instanceof Error ? e.message : String(e)}`);
+  }
   let sim: Simulation;
   try {
     sim = await createSimulation(opts.engine, opts.overrides);
